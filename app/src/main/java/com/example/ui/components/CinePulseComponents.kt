@@ -13,12 +13,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Scale
 import com.example.ui.theme.LocalHighContrast
 import com.example.ui.theme.selectableColors
 
@@ -294,6 +300,51 @@ fun GlassIconButton(
             contentDescription = contentDescription,
             tint = tint
         )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PosterImage -> Shared Uncropped Poster Component
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+fun PosterImage(
+    imageUrl: String?,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    aspectRatio: Float = 2f / 3f,
+    shape: Shape = RoundedCornerShape(12.dp),
+    overlay: @Composable BoxScope.() -> Unit = {}
+) {
+    val isHighContrast = LocalHighContrast.current
+    val border = if (isHighContrast) {
+        BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)
+    } else {
+        BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+    }
+
+    Box(
+        modifier = modifier
+            .aspectRatio(aspectRatio)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+            .border(border, shape),
+        contentAlignment = Alignment.Center
+    ) {
+        if (!imageUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imageUrl)
+                    .scale(Scale.FIT)
+                    .crossfade(200)
+                    .build(),
+                contentDescription = contentDescription,
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        overlay()
     }
 }
 

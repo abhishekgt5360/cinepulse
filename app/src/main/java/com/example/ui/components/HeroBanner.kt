@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.size.Scale
 import com.example.data.model.MovieItem
 
 
@@ -82,7 +84,7 @@ fun HeroBanner(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(440.dp)
+            .aspectRatio(16f / 9f)
             .testTag("hero_banner")
     ) {
         HorizontalPager(
@@ -140,16 +142,19 @@ private fun HeroBannerSlide(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .clickable(onClick = onItemClick)
     ) {
-        // Full-bleed cinematic backdrop
+        // Uncropped backdrop image
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(item.posterUrl)
+                .scale(Scale.FIT)
                 .crossfade(true)
                 .build(),
             contentDescription = item.safeName,
-            contentScale       = ContentScale.Crop,
+            contentScale       = ContentScale.Fit,
+            alignment          = Alignment.Center,
             modifier           = Modifier.fillMaxSize()
         )
 

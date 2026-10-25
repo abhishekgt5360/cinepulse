@@ -267,49 +267,45 @@ private fun HistoryRowCard(
                 modifier = Modifier
                     .width(96.dp)
                     .height(62.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(historyItem.posterUrl)
-                        .crossfade(true)
-                        .build(),
+                PosterImage(
+                    imageUrl = historyItem.posterUrl,
                     contentDescription = historyItem.title,
-                    contentScale = ContentScale.Crop,
+                    aspectRatio = 16f / 9f,
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxSize()
-                )
-
-                // Frosted play button
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .align(Alignment.Center)
-                        .clip(RoundedCornerShape(15.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer),
-                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Resume",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(18.dp)
+                    // Frosted play button
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .align(Alignment.Center)
+                            .clip(RoundedCornerShape(15.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Resume",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    // Progress bar
+                    val progress = if (historyItem.durationMs > 0) {
+                        (historyItem.positionMs.toFloat() / historyItem.durationMs.toFloat()).coerceIn(0f, 1f)
+                    } else 0f
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .align(Alignment.BottomCenter),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
                     )
                 }
-
-                // Progress bar
-                val progress = if (historyItem.durationMs > 0) {
-                    (historyItem.positionMs.toFloat() / historyItem.durationMs.toFloat()).coerceIn(0f, 1f)
-                } else 0f
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp)
-                        .align(Alignment.BottomCenter),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
-                )
             }
 
             Spacer(modifier = Modifier.width(12.dp))

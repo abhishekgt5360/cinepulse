@@ -70,34 +70,20 @@ fun MoviePosterCard(
 ) {
     val shape = RoundedCornerShape(16.dp)
 
-    val isHighContrast = LocalHighContrast.current
-    val border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
-
     Column(
         modifier = modifier
             .width(cardWidth)
             .testTag("movie_card_${movie.safeSlug}")
     ) {
-        Box(
+        PosterImage(
+            imageUrl = movie.posterUrl,
+            contentDescription = movie.safeName,
+            aspectRatio = 2f / 3f,
+            shape = shape,
             modifier = Modifier
-                .width(cardWidth)
-                .height(cardHeight)
-                .clip(shape)
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-                .border(border, shape)
+                .fillMaxWidth()
                 .clickable { onClick() }
         ) {
-            // Poster image
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(movie.posterUrl)
-                    .crossfade(300)
-                    .build(),
-                contentDescription = movie.safeName,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-
             // Bottom gradient fade
             Box(
                 modifier = Modifier
@@ -204,92 +190,90 @@ fun ContinueWatchingCard(
                 .fillMaxWidth()
                 .height(115.dp)
         ) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(history.posterUrl)
-                    .crossfade(300)
-                    .build(),
+            PosterImage(
+                imageUrl = history.posterUrl,
                 contentDescription = history.title,
-                contentScale = ContentScale.Crop,
+                aspectRatio = 16f / 9f,
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
                 modifier = Modifier.fillMaxSize()
-            )
-
-            // Scrim
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.80f)) // legibility-ok: thumbnail gradient scrim
-                        )
-                    )
-            )
-
-            // Brand Gradient Play Button in Center
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .align(Alignment.Center)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-                    .clickable { onPlayClick() },
-                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Resume",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            // Delete button top right
-            Box(
-                modifier = Modifier
-                    .padding(6.dp)
-                    .size(24.dp)
-                    .align(Alignment.TopEnd)
-                    .clip(CircleShape)
-                    .background(Color(0x99000000)) // legibility-ok: delete icon backdrop scrim
-                    .clickable { onDeleteClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Remove",
-                    tint = Color.White, // legibility-ok: icon over thumbnail scrim
-                    modifier = Modifier.size(14.dp)
-                )
-            }
-
-            // S:E badge
-            if (history.season > 0 || history.episode > 0) {
-                PosterBadge(
-                    text = "S${history.season}:E${history.episode}",
-                    modifier = Modifier
-                        .padding(6.dp)
-                        .align(Alignment.TopStart)
-                )
-            }
-
-            // Progress bar at bottom of thumbnail
-            val progress = if (history.durationMs > 0) {
-                (history.positionMs.toFloat() / history.durationMs.toFloat()).coerceIn(0f, 1f)
-            } else 0f
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
-            ) {
+                // Scrim
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(progress)
-                        .height(3.dp)
-                        .background(MaterialTheme.colorScheme.primary)
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.80f)) // legibility-ok: thumbnail gradient scrim
+                            )
+                        )
                 )
+
+                // Brand Gradient Play Button in Center
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .align(Alignment.Center)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .clickable { onPlayClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Resume",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // Delete button top right
+                Box(
+                    modifier = Modifier
+                        .padding(6.dp)
+                        .size(24.dp)
+                        .align(Alignment.TopEnd)
+                        .clip(CircleShape)
+                        .background(Color(0x99000000)) // legibility-ok: delete icon backdrop scrim
+                        .clickable { onDeleteClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Remove",
+                        tint = Color.White, // legibility-ok: icon over thumbnail scrim
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+
+                // S:E badge
+                if (history.season > 0 || history.episode > 0) {
+                    PosterBadge(
+                        text = "S${history.season}:E${history.episode}",
+                        modifier = Modifier
+                            .padding(6.dp)
+                            .align(Alignment.TopStart)
+                    )
+                }
+
+                // Progress bar at bottom of thumbnail
+                val progress = if (history.durationMs > 0) {
+                    (history.positionMs.toFloat() / history.durationMs.toFloat()).coerceIn(0f, 1f)
+                } else 0f
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress)
+                            .height(3.dp)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
             }
         }
 

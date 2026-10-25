@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.exoplayer.ExoPlayer
 import coil.compose.AsyncImage
+import coil.size.Scale
 import coil.request.ImageRequest
 import com.example.data.model.StreamSource
 import com.example.ui.DetailPlayerUiState
@@ -237,14 +238,17 @@ fun DetailScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(if (isLandscape) 180.dp else 280.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(subject?.cover?.url)
+                            .scale(Scale.FIT)
                             .crossfade(400)
                             .build(),
                         contentDescription = uiState.title,
-                        contentScale = ContentScale.Crop,
+                        contentScale = ContentScale.Fit,
+                        alignment = Alignment.Center,
                         modifier = Modifier.fillMaxSize()
                     )
 
