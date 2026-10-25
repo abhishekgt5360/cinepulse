@@ -174,9 +174,9 @@ private fun HeroBannerSlide(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.00f to Color.Transparent,
-                            0.35f to Color.Transparent,
-                            0.62f to MaterialTheme.colorScheme.background.copy(alpha = 0.70f),
-                            0.82f to MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
+                            0.25f to Color.Transparent,
+                            0.60f to Color.Black.copy(alpha = 0.60f),
+                            0.85f to Color.Black.copy(alpha = 0.85f),
                             1.00f to MaterialTheme.colorScheme.background
                         )
                     )
@@ -191,7 +191,7 @@ private fun HeroBannerSlide(
                 .padding(horizontal = 20.dp, vertical = 26.dp)
         ) {
             // Spotlight Tag
-            LiquidGlassPill(label = "FEATURED SPOTLIGHT")
+            PosterBadge(text = "FEATURED SPOTLIGHT")
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -214,35 +214,15 @@ private fun HeroBannerSlide(
                 verticalAlignment     = Alignment.CenterVertically
             ) {
                 if (!item.rating.isNullOrBlank()) {
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(MaterialTheme.colorScheme.surfaceContainer)
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector        = Icons.Default.Star,
-                            contentDescription = null,
-                            tint               = MaterialTheme.colorScheme.tertiary,
-                            modifier           = Modifier.size(11.dp)
-                        )
-                        Spacer(Modifier.width(3.dp))
-                        Text(
-                            text       = item.rating ?: "",
-                            color      = Color.White,
-                            fontSize   = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    PosterBadge(text = "★ ${item.rating}")
                 }
 
                 item.year?.takeIf { it.isNotBlank() }?.let { year ->
-                    LiquidGlassPill(label = year)
+                    PosterBadge(text = year)
                 }
 
                 item.genre?.split(",")?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { genre ->
-                    LiquidGlassPill(label = genre)
+                    PosterBadge(text = genre)
                 }
             }
 

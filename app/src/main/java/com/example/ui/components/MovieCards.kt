@@ -113,49 +113,23 @@ fun MoviePosterCard(
 
             // Rating badge — top right
             if (!movie.rating.isNullOrBlank()) {
-                Row(
+                PosterBadge(
+                    text = "★ ${movie.rating}",
                     modifier = Modifier
                         .padding(7.dp)
                         .align(Alignment.TopEnd)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f))
-                        .padding(horizontal = 6.dp, vertical = 3.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.size(10.dp)
-                    )
-                    Spacer(Modifier.width(3.dp))
-                    Text(
-                        text = movie.rating ?: "",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                )
             }
 
-            // Type/badge pill — top left (Brand Gradient #FF6A3D -> #E63956)
+            // Type/badge pill — top left
             val badgeText = movie.badge?.takeIf { it.isNotBlank() } ?: movie.type?.uppercase()
             if (!badgeText.isNullOrBlank()) {
-                Box(
+                PosterBadge(
+                    text = badgeText,
                     modifier = Modifier
                         .padding(7.dp)
                         .align(Alignment.TopStart)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(MaterialTheme.colorScheme.primary)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = badgeText,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 8.5.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                )
             }
         }
 
@@ -290,21 +264,12 @@ fun ContinueWatchingCard(
 
             // S:E badge
             if (history.season > 0 || history.episode > 0) {
-                Box(
+                PosterBadge(
+                    text = "S${history.season}:E${history.episode}",
                     modifier = Modifier
                         .padding(6.dp)
                         .align(Alignment.TopStart)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0xCC000000))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "S${history.season}:E${history.episode}",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                )
             }
 
             // Progress bar at bottom of thumbnail

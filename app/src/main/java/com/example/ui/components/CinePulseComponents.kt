@@ -10,11 +10,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.ui.theme.LocalHighContrast
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -265,6 +267,37 @@ fun GlassIconButton(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = tint
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PosterBadge -> Badge ON TOP of artwork/poster images
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Badges are drawn over arbitrary poster artwork, not over a themed surface,
+// so they use a fixed dark scrim with white text in every theme. This is the
+// one place where fixed colors are correct. White on 75% black is about 10:1
+// even over a pure-white poster.
+@Composable
+fun PosterBadge(text: String, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(999.dp)
+    val highContrast = LocalHighContrast.current
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .clip(shape)
+            .background(Color.Black.copy(alpha = 0.75f), shape)
+            .then(if (highContrast) Modifier.border(1.dp, Color.White, shape) else Modifier)
+            .padding(horizontal = 9.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = text,
+            color = Color.White,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            softWrap = false
         )
     }
 }
