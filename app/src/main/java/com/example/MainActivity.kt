@@ -319,7 +319,7 @@ fun MainApp(
                             onSearchClick = { viewModel.selectTab(AppTab.SEARCH) },
                             onSeeAllClick = { sectionName ->
                                 if (sectionName.equals(com.example.util.RegionalCategoryConfig.ROW_TITLE, ignoreCase = true)) {
-                                    viewModel.setCatalogGenre(com.example.util.RegionalCategoryConfig.ROW_TITLE)
+                                    viewModel.setCatalogRegion(com.example.util.RegionalCategoryConfig.ROW_TITLE)
                                 }
                                 viewModel.selectTab(AppTab.CATALOG)
                             }
@@ -330,6 +330,7 @@ fun MainApp(
                         CatalogScreen(
                             uiState = catalogState,
                             onTypeSelected = { type -> viewModel.setCatalogType(type) },
+                            onRegionSelected = { region -> viewModel.setCatalogRegion(region) },
                             onGenreSelected = { genre -> viewModel.setCatalogGenre(genre) },
                             onSortSelected = { sort -> viewModel.setCatalogSort(sort) },
                             onMovieClick = { movie ->

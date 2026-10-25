@@ -26,6 +26,20 @@ class MovieRepository(
         context?.cacheDir?.resolve("cached_bollywood_feed.json")
     }
 
+    private fun writeCacheAtomically(file: java.io.File?, content: String) {
+        if (file == null) return
+        try {
+            val tmpFile = java.io.File(file.parentFile, "${file.name}.tmp")
+            tmpFile.writeText(content)
+            if (tmpFile.exists()) {
+                if (file.exists()) {
+                    file.delete()
+                }
+                tmpFile.renameTo(file)
+            }
+        } catch (_: Exception) {}
+    }
+
     companion object {
         @Volatile private var inMemoryHome: HomeResponse? = null
         private val catalogCache = java.util.concurrent.ConcurrentHashMap<String, CatalogResponse>()
@@ -71,28 +85,13 @@ class MovieRepository(
         return catalogCache[key]
     }
 
-    suspend fun getMovies(page: Int, sort: String?, genre: String?, country: String? = null): Result<CatalogResponse> =
-        withContext(Dispatchers.IO) {
-            val cacheKey = "movies_${page}_${sort}_${genre}_${country}"
-            try {
-                val response = api.getMovies(page = page, sort = sort, genre = genre, country = country)
-                if (response.items.isNotEmpty()) {
-                    catalogCache[cacheKey] = response
-                }
-                Result.success(response)
-            } catch (e: Exception) {
-                catalogCache[cacheKey]?.let { return@withContext Result.success(it) }
-                Result.failure(e)
-            }
-        }
-
     fun getCachedBollywood(): CatalogResponse? {
         try {
             val file = bollywoodCacheFile
-            if (file != null && file.exists()) {
+            if (file != null && file.exists() && file.length() > 0) {
                 val json = file.readText()
                 val parsed = catalogJsonAdapter.fromJson(json)
-                if (parsed != null && parsed.items.isNotEmpty()) {
+                if (parsed != null && !parsed.items.isNullOrEmpty()) {
                     return parsed
                 }
             }
@@ -100,100 +99,53 @@ class MovieRepository(
         return null
     }
 
-    suspend fun getBollywoodMovies(page: Int = 1): Result<CatalogResponse> = withContext(Dispatchers.IO) {
+    suspend fun getRegionCatalog(
+        type: com.example.ui.CatalogType = com.example.ui.CatalogType.MOVIES,
+        country: String? = null,
+        genre: String? = null,
+        sort: String? = null,
+        page: Int = 1
+    ): Result<CatalogResponse> = withContext(Dispatchers.IO) {
+        val cacheKey = "${type.name.lowercase()}_${page}_${sort}_${genre}_${country}"
         try {
-            // Tier 1: Try country filter ("India")
-            var response = try {
-                api.getMovies(page = page, country = RegionalCategoryConfig.COUNTRY_FILTER)
-            } catch (_: Exception) {
-                CatalogResponse(items = emptyList())
+            val response = when (type) {
+                com.example.ui.CatalogType.MOVIES -> api.getMovies(page = page, sort = sort, genre = genre, country = country)
+                com.example.ui.CatalogType.TV_SERIES -> api.getTvSeries(page = page, sort = sort, genre = genre, country = country)
+                com.example.ui.CatalogType.ANIMATION -> api.getAnimation(page = page, sort = sort, genre = genre)
             }
 
-            // Tier 2: Try genre filter ("Bollywood") if Tier 1 returned no items
-            if (response.items.isEmpty()) {
-                response = try {
-                    api.getMovies(page = page, genre = RegionalCategoryConfig.ROW_TITLE)
-                } catch (_: Exception) {
-                    CatalogResponse(items = emptyList())
-                }
-            }
-
-            // Tier 3: Try search queries ("Hindi", "Bollywood", "Indian") if Tiers 1 & 2 returned no items
-            if (response.items.isEmpty()) {
-                val searchResults = mutableListOf<MovieItem>()
-                val seenSubjectIds = mutableSetOf<String>()
-
-                for (query in RegionalCategoryConfig.FALLBACK_QUERIES) {
-                    try {
-                        val searchRes = api.search(query = query, page = page)
-                        searchRes.items.forEach { item ->
-                            val id = item.subjectId.ifBlank { item.safeSlug }
-                            if (id.isNotBlank() && seenSubjectIds.add(id)) {
-                                searchResults.add(item)
-                            }
-                        }
-                    } catch (_: Exception) {}
-                }
-
-                if (searchResults.isNotEmpty()) {
-                    response = CatalogResponse(page = page, items = searchResults)
-                }
-            }
-
-            // Cache non-empty responses for offline instant loading
             if (response.items.isNotEmpty()) {
-                try {
-                    bollywoodCacheFile?.writeText(catalogJsonAdapter.toJson(response))
-                } catch (_: Exception) {}
-                Result.success(response)
-            } else {
-                // Tier 4: Fall back to local disk cache if live network returned empty
+                catalogCache[cacheKey] = response
+                // Write cached_bollywood_feed.json ONLY for page 1, country != null, and unfiltered by genre/sort
+                if (page == 1 && country != null && genre == null && sort == null && type == com.example.ui.CatalogType.MOVIES) {
+                    writeCacheAtomically(bollywoodCacheFile, catalogJsonAdapter.toJson(response))
+                }
+            }
+            Result.success(response)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            catalogCache[cacheKey]?.let { return@withContext Result.success(it) }
+            if (page == 1 && country != null && genre == null && sort == null && type == com.example.ui.CatalogType.MOVIES) {
                 val cached = getCachedBollywood()
                 if (cached != null) {
-                    Result.success(cached)
-                } else {
-                    Result.success(response)
+                    return@withContext Result.success(cached)
                 }
             }
-        } catch (e: Exception) {
-            val cached = getCachedBollywood()
-            if (cached != null) {
-                Result.success(cached)
-            } else {
-                Result.failure(e)
-            }
+            Result.failure(e)
         }
     }
 
-    suspend fun getTvSeries(page: Int, sort: String?, genre: String?, country: String? = null): Result<CatalogResponse> =
-        withContext(Dispatchers.IO) {
-            val cacheKey = "tv_${page}_${sort}_${genre}_${country}"
-            try {
-                val response = api.getTvSeries(page = page, sort = sort, genre = genre, country = country)
-                if (response.items.isNotEmpty()) {
-                    catalogCache[cacheKey] = response
-                }
-                Result.success(response)
-            } catch (e: Exception) {
-                catalogCache[cacheKey]?.let { return@withContext Result.success(it) }
-                Result.failure(e)
-            }
-        }
+    suspend fun getMovies(page: Int, sort: String?, genre: String?, country: String? = null): Result<CatalogResponse> =
+        getRegionCatalog(type = com.example.ui.CatalogType.MOVIES, country = country, genre = genre, sort = sort, page = page)
 
-    suspend fun getAnimation(page: Int, sort: String?, genre: String?, country: String? = null): Result<CatalogResponse> =
-        withContext(Dispatchers.IO) {
-            val cacheKey = "anim_${page}_${sort}_${genre}_${country}"
-            try {
-                val response = api.getAnimation(page = page, sort = sort, genre = genre)
-                if (response.items.isNotEmpty()) {
-                    catalogCache[cacheKey] = response
-                }
-                Result.success(response)
-            } catch (e: Exception) {
-                catalogCache[cacheKey]?.let { return@withContext Result.success(it) }
-                Result.failure(e)
-            }
-        }
+    suspend fun getTvSeries(page: Int, sort: String?, genre: String?, country: String? = null): Result<CatalogResponse> =
+        getRegionCatalog(type = com.example.ui.CatalogType.TV_SERIES, country = country, genre = genre, sort = sort, page = page)
+
+    suspend fun getAnimation(page: Int, sort: String?, genre: String?): Result<CatalogResponse> =
+        getRegionCatalog(type = com.example.ui.CatalogType.ANIMATION, genre = genre, sort = sort, page = page)
+
+    suspend fun getBollywoodMovies(page: Int = 1): Result<CatalogResponse> =
+        getRegionCatalog(type = com.example.ui.CatalogType.MOVIES, country = RegionalCategoryConfig.REGION_PRESETS.firstOrNull { it.country != null }?.country ?: "India", page = page)
 
     suspend fun search(query: String, page: Int = 1): Result<SearchResponse> =
         withContext(Dispatchers.IO) {

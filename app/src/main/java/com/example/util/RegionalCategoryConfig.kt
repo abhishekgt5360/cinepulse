@@ -1,7 +1,15 @@
 package com.example.util
 
+data class RegionPreset(
+    val label: String,
+    val country: String?
+)
+
 object RegionalCategoryConfig {
     const val ROW_TITLE = "Bollywood"
-    const val COUNTRY_FILTER = "India"
-    val FALLBACK_QUERIES = listOf("Hindi", "Bollywood", "Indian")
+
+    val REGION_PRESETS = listOf(
+        RegionPreset(label = "All", country = null),
+        RegionPreset(label = "Bollywood", country = "India")
+    )
 }

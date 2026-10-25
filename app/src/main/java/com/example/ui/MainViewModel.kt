@@ -55,6 +55,7 @@ data class HomeUiState(
 
 data class CatalogUiState(
     val type: CatalogType = CatalogType.MOVIES,
+    val selectedRegion: String = "All",
     val selectedGenre: String = "All",
     val selectedSort: String = "foryou",
     val items: List<MovieItem> = emptyList(),
@@ -319,6 +320,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setCatalogRegion(region: String) {
+        if (_catalogState.value.selectedRegion != region) {
+            _catalogState.update { it.copy(selectedRegion = region, page = 1) }
+            loadCatalog(reset = true)
+        }
+    }
+
     fun setCatalogGenre(genre: String) {
         if (_catalogState.value.selectedGenre != genre) {
             _catalogState.update { it.copy(selectedGenre = genre, page = 1) }
@@ -340,15 +348,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (!reset && !currentState.hasMore) return@launch
 
-            val isBollywoodGenre = currentState.selectedGenre.equals(RegionalCategoryConfig.ROW_TITLE, ignoreCase = true)
-            val genreParam = if (currentState.selectedGenre == "All" || isBollywoodGenre) null else currentState.selectedGenre
-            val countryParam = if (isBollywoodGenre) RegionalCategoryConfig.COUNTRY_FILTER else null
+            val regionPreset = RegionalCategoryConfig.REGION_PRESETS.firstOrNull { it.label.equals(currentState.selectedRegion, ignoreCase = true) }
+            val countryParam = regionPreset?.country
+            val genreParam = if (currentState.selectedGenre == "All") null else currentState.selectedGenre
             val sortParam = currentState.selectedSort
-            val cacheKey = when (currentState.type) {
-                CatalogType.MOVIES -> "movies_${targetPage}_${sortParam}_${genreParam}_${countryParam}"
-                CatalogType.TV_SERIES -> "tv_${targetPage}_${sortParam}_${genreParam}_${countryParam}"
-                CatalogType.ANIMATION -> "anim_${targetPage}_${sortParam}_${genreParam}_${countryParam}"
-            }
+            val cacheKey = "${currentState.type.name.lowercase()}_${targetPage}_${sortParam}_${genreParam}_${countryParam}"
 
             // Immediately display cached catalog items if available on reset
             if (reset) {
@@ -369,11 +373,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _catalogState.update { it.copy(isLoading = true, errorMessage = null) }
             }
 
-            val result = when (currentState.type) {
-                CatalogType.MOVIES -> repository.getMovies(page = targetPage, sort = sortParam, genre = genreParam, country = countryParam)
-                CatalogType.TV_SERIES -> repository.getTvSeries(page = targetPage, sort = sortParam, genre = genreParam, country = countryParam)
-                CatalogType.ANIMATION -> repository.getAnimation(page = targetPage, sort = sortParam, genre = genreParam, country = countryParam)
-            }
+            val result = repository.getRegionCatalog(
+                type = currentState.type,
+                country = countryParam,
+                genre = genreParam,
+                sort = sortParam,
+                page = targetPage
+            )
 
             result.onSuccess { response ->
                 val newItems = if (reset) response.items else currentState.items + response.items

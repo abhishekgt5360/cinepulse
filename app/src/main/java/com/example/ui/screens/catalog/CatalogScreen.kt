@@ -36,7 +36,7 @@ import com.example.ui.theme.selectableColors
 
 
 private val GENRES = listOf(
-    "All", RegionalCategoryConfig.ROW_TITLE, "Action", "Drama", "Comedy", "Sci-Fi", "Horror",
+    "All", "Action", "Drama", "Comedy", "Sci-Fi", "Horror",
     "Thriller", "Adventure", "Romance", "Fantasy", "Crime", "Mystery", "Animation"
 )
 
@@ -51,6 +51,7 @@ private val SORTS = listOf(
 fun CatalogScreen(
     uiState: CatalogUiState,
     onTypeSelected: (CatalogType) -> Unit,
+    onRegionSelected: (String) -> Unit,
     onGenreSelected: (String) -> Unit,
     onSortSelected: (String) -> Unit,
     onMovieClick: (MovieItem) -> Unit,
@@ -169,12 +170,30 @@ fun CatalogScreen(
             }
         }
 
-        // ── Sort & Genre filter chips ─────────────────────────────────────────
+        // ── Region, Sort & Genre filter chips ─────────────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 6.dp)
         ) {
+            // Region chips
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                RegionalCategoryConfig.REGION_PRESETS.forEach { regionPreset ->
+                    val isSelected = uiState.selectedRegion == regionPreset.label
+                    GlassChip(
+                        label = regionPreset.label,
+                        selected = isSelected,
+                        onClick = { onRegionSelected(regionPreset.label) }
+                    )
+                }
+            }
+
             // Sort chips
             Row(
                 modifier = Modifier
