@@ -29,6 +29,18 @@ data class SelectableColors(
 )
 
 @Composable
+fun playerAccent(): Color {
+    val c = MaterialTheme.colorScheme
+    return getPlayerAccentForScheme(c)
+}
+
+fun getPlayerAccentForScheme(scheme: androidx.compose.material3.ColorScheme): Color {
+    val black = Color.Black
+    val candidates = listOf(scheme.primary, scheme.inversePrimary, Color.White)
+    return candidates.firstOrNull { calculateContrastRatio(it, black) >= 3.0 } ?: Color.White
+}
+
+@Composable
 fun selectableColors(selected: Boolean): SelectableColors {
     val c = MaterialTheme.colorScheme
     val isHighContrast = LocalHighContrast.current

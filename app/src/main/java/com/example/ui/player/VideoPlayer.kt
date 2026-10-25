@@ -12,11 +12,13 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.media.AudioManager
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,6 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,6 +43,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -98,10 +102,13 @@ fun VideoPlayer(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     val activity = remember(context) { context.findActivity() }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val scope = rememberCoroutineScope()
+    val isHighContrast = LocalHighContrast.current
+    val accentColor = playerAccent()
 
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
     val isInPip = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
@@ -159,7 +166,24 @@ fun VideoPlayer(
     var showSubtitleDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
 
-    // Immersive mode in landscape
+    // Fix: Keep screen on during playback
+    fun updateKeepScreenOn(playing: Boolean, state: Int, error: Boolean) {
+        val shouldKeepOn = playing && !error && (state == Player.STATE_READY || state == Player.STATE_BUFFERING)
+        view.keepScreenOn = shouldKeepOn
+        activity?.window?.let { window ->
+            if (shouldKeepOn) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
+    }
+
+    LaunchedEffect(isPlaying, isBuffering, hasError) {
+        updateKeepScreenOn(isPlaying, exoPlayer.playbackState, hasError)
+    }
+
+    // System bars formatting
     fun setImmersive(enabled: Boolean) {
         activity?.window?.let { window ->
             val insetsController = WindowCompat.getInsetsController(window, window.decorView)
@@ -167,8 +191,13 @@ fun VideoPlayer(
                 insetsController.hide(WindowInsetsCompat.Type.systemBars())
                 insetsController.systemBarsBehavior =
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                insetsController.isAppearanceLightStatusBars = false // legibility-ok: force light icons over video
+                insetsController.isAppearanceLightNavigationBars = false // legibility-ok: force light icons over video
             } else {
                 insetsController.show(WindowInsetsCompat.Type.systemBars())
+                val isLightTheme = (configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) != Configuration.UI_MODE_NIGHT_YES
+                insetsController.isAppearanceLightStatusBars = isLightTheme
+                insetsController.isAppearanceLightNavigationBars = isLightTheme
             }
         }
     }
@@ -177,7 +206,7 @@ fun VideoPlayer(
         setImmersive(isLandscape)
     }
 
-    // Toggle orientation: Uses SCREEN_ORIENTATION_LANDSCAPE to lock orientation reliably
+    // Toggle orientation
     fun toggleOrientation() {
         activity?.let { act ->
             act.requestedOrientation = if (isLandscape) {
@@ -188,12 +217,11 @@ fun VideoPlayer(
         }
     }
 
-    // BackHandler: return to portrait if in landscape
     BackHandler(enabled = isLandscape) {
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     }
 
-    // Seamless media loading: sets media item on source change, retry trigger, or error recovery
+    // Seamless media loading
     LaunchedEffect(currentSource, streamReloadTrigger) {
         if (currentSource != null && currentSource.url.isNotBlank()) {
             val url = currentSource.url
@@ -227,7 +255,7 @@ fun VideoPlayer(
         }
     }
 
-    // Auto-select English or default available subtitle track when captions arrive
+    // Auto-select English or default caption
     LaunchedEffect(captions) {
         if (selectedCaptionIndex == -1 && captions.isNotEmpty()) {
             val defaultIndex = captions.indexOfFirst {
@@ -249,7 +277,7 @@ fun VideoPlayer(
         }
     }
 
-    // Subtitle sync & position tick (250ms crisp interval)
+    // Subtitle sync & position tick
     LaunchedEffect(exoPlayer) {
         while (true) {
             delay(250)
@@ -272,14 +300,14 @@ fun VideoPlayer(
         }
     }
 
-    // Keep preferred resolution synced with StreamTokenManager
+    // Sync preferred resolution
     LaunchedEffect(currentSource) {
         currentSource?.resolution?.let { res ->
             StreamTokenManager.setPreferredResolution(res)
         }
     }
 
-    // Proactive background keep-alive: keeps signed CDN tokens warm before they expire
+    // Proactive background keep-alive
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
             while (true) {
@@ -293,7 +321,7 @@ fun VideoPlayer(
         }
     }
 
-    // Progress persistence every 5 seconds
+    // Progress persistence
     LaunchedEffect(exoPlayer) {
         while (true) {
             delay(5000)
@@ -315,10 +343,12 @@ fun VideoPlayer(
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
+                updateKeepScreenOn(playing, exoPlayer.playbackState, hasError)
             }
 
             override fun onPlaybackStateChanged(state: Int) {
                 isBuffering = state == Player.STATE_BUFFERING
+                updateKeepScreenOn(exoPlayer.playWhenReady, state, hasError)
                 if (state == Player.STATE_READY) {
                     duration = exoPlayer.duration.coerceAtLeast(0L)
                     hasError = false
@@ -339,7 +369,6 @@ fun VideoPlayer(
                         error.errorCode in 2000..2999 ||
                         error.errorCodeName.contains("IO", ignoreCase = true)
 
-                // Seamless automatic recovery: if stream dropped, link expired, or container parse failed mid-stream, auto-reconnect
                 if ((isContainerError || isNetworkOrHttp) && autoRetryCount < 4) {
                     autoRetryCount++
                     isBuffering = true
@@ -347,7 +376,6 @@ fun VideoPlayer(
 
                     scope.launch {
                         if (isNetworkOrHttp) {
-                            // Link expiration (ERROR_CODE_IO_UNSPECIFIED) or network drop: Fetch fresh signed token from API before reloading player
                             reconnectingMessage = "Stream link refreshed, resuming..."
                             val safePos = resumePos.coerceAtLeast(0L)
                             val freshSources = withContext(Dispatchers.IO) {
@@ -369,7 +397,6 @@ fun VideoPlayer(
                             }
                             onRefreshStream(safePos)
                         } else {
-                            // Container parse hiccup: re-prepare local stream
                             reconnectingMessage = "Reconnecting stream ($autoRetryCount/4)..."
                             delay(300)
                             try {
@@ -408,7 +435,7 @@ fun VideoPlayer(
                 onProgressUpdate(exoPlayer.currentPosition, exoPlayer.duration)
             }
             exoPlayer.removeListener(listener)
-            // DO NOT release exoPlayer here so it survives rotation!
+            updateKeepScreenOn(false, Player.STATE_IDLE, true)
             setImmersive(false)
         }
     }
@@ -416,7 +443,7 @@ fun VideoPlayer(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color.Black) // legibility-ok: video surface
             .testTag("video_player_container")
             .pointerInput(isLocked, isInPip) {
                 if (isInPip) return@pointerInput
@@ -450,50 +477,47 @@ fun VideoPlayer(
                 if (!isInPip && isLandscape && !isLocked) {
                     detectVerticalDragGestures(
                         onVerticalDrag = { change, dragAmount ->
+                            change.consume()
                             val width = size.width
-                            val isLeft = change.position.x < width / 2
-                            if (isLeft) {
-                                activity?.window?.let { window ->
-                                    val lp = window.attributes
-                                    val currentB = if (lp.screenBrightness < 0f) 0.5f else lp.screenBrightness
-                                    val newB = (currentB - (dragAmount / 800f)).coerceIn(0.05f, 1.0f)
-                                    lp.screenBrightness = newB
-                                    window.attributes = lp
-                                    brightnessLevel = newB
-                                }
+                            val x = change.position.x
+                            val sensitivity = 0.005f
+
+                            if (x < width / 2) {
+                                val currentBr = activity?.window?.attributes?.screenBrightness.takeIf { it != null && it >= 0f } ?: 0.5f
+                                val newBr = (currentBr - dragAmount * sensitivity).coerceIn(0.05f, 1.0f)
+                                activity?.window?.attributes = activity?.window?.attributes?.apply { screenBrightness = newBr }
+                                brightnessLevel = newBr
                             } else {
                                 audioManager?.let { am ->
-                                    val maxV = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                                    val curV = am.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                    val delta = (-dragAmount / 30f).roundToInt()
-                                    val newV = (curV + delta).coerceIn(0, maxV)
-                                    am.setStreamVolume(AudioManager.STREAM_MUSIC, newV, 0)
-                                    volumeLevel = newV.toFloat() / maxV.toFloat()
+                                    val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                                    val currentVol = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+                                    val delta = (-dragAmount * sensitivity * maxVol).toInt()
+                                    val newVol = (currentVol + delta).coerceIn(0, maxVol)
+                                    am.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+                                    volumeLevel = newVol.toFloat() / maxVol.toFloat()
                                 }
                             }
                         },
                         onDragEnd = {
                             scope.launch {
-                                delay(1000)
-                                volumeLevel = -1f
+                                delay(1200)
                                 brightnessLevel = -1f
+                                volumeLevel = -1f
                             }
                         }
                     )
                 }
             }
     ) {
-        // Video View - Attached to the persistent exoPlayer
+        // Video Surface
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
-                    player = exoPlayer
                     useController = false
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
-                    resizeMode = currentResizeMode.mode
                 }
             },
             update = { playerView ->
@@ -515,17 +539,17 @@ fun VideoPlayer(
             ) {
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = Color.Black.copy(alpha = captionBgOpacity)
+                    color = Color.Black.copy(alpha = captionBgOpacity) // legibility-ok: subtitles
                 ) {
                     Text(
                         text = currentSubtitleText,
                         style = MaterialTheme.typography.bodyLarge.copy(
-                            color = Color.White.copy(alpha = captionTextOpacity),
+                            color = Color.White.copy(alpha = captionTextOpacity), // legibility-ok: subtitles
                             fontWeight = FontWeight.Bold,
                             fontSize = if (isLandscape) 16.sp else 13.sp,
                             shadow = if (captionBgOpacity < 0.40f) {
                                 Shadow(
-                                    color = Color.Black.copy(alpha = 0.95f),
+                                    color = Color.Black.copy(alpha = 0.95f), // legibility-ok: subtitles
                                     offset = Offset(2f, 2f),
                                     blurRadius = 4f
                                 )
@@ -550,13 +574,14 @@ fun VideoPlayer(
             ) {
                 Surface(
                     shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+                    border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null,
                     modifier = Modifier.size(64.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             text = feedback,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 16.sp
                         )
@@ -574,18 +599,19 @@ fun VideoPlayer(
             ) {
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = Color.Black.copy(alpha = 0.8f),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+                    border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null,
                     modifier = Modifier.padding(6.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.BrightnessMedium, contentDescription = null, tint = Color(0xFFE9C16C), modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.BrightnessMedium, contentDescription = "Brightness", tint = accentColor, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "${(brightnessLevel * 100).toInt()}%",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
                         )
@@ -603,18 +629,19 @@ fun VideoPlayer(
             ) {
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = Color.Black.copy(alpha = 0.8f),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+                    border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null,
                     modifier = Modifier.padding(6.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Color(0xFFE9C16C), modifier = Modifier.size(18.dp))
+                        Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "Volume", tint = accentColor, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "${(volumeLevel * 100).toInt()}%",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
                         )
@@ -628,12 +655,12 @@ fun VideoPlayer(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f)),
+                    .background(Color.Black.copy(alpha = 0.4f)), // legibility-ok: video surface
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(
-                        color = LogoRed,
+                        color = accentColor,
                         strokeWidth = 3.dp,
                         modifier = Modifier.size(44.dp)
                     )
@@ -641,13 +668,13 @@ fun VideoPlayer(
                         Spacer(modifier = Modifier.height(12.dp))
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFF000000).copy(alpha = 0.85f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE9C16C).copy(alpha = 0.5f))
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+                            border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null
                         ) {
                             Text(
                                 text = reconnectingMessage ?: "",
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color(0xFFE9C16C),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontWeight = FontWeight.SemiBold
                                 ),
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
@@ -663,134 +690,144 @@ fun VideoPlayer(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.92f)),
+                    .background(Color.Black.copy(alpha = 0.92f)), // legibility-ok: video surface
                 contentAlignment = Alignment.Center
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
                     modifier = Modifier.padding(24.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = "Error",
-                        tint = Color(0xFFE9C16C),
-                        modifier = Modifier.size(40.dp)
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "Playback Interrupted",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = errorMessage ?: "Unable to stream. Stream connection was interrupted.",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color.White.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center
-                        )
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(24.dp)
                     ) {
-                        Button(
-                            onClick = {
-                                hasError = false
-                                isBuffering = true
-                                autoRetryCount = 0
-                                reconnectingMessage = "Fetching fresh stream token..."
-                                val safePos = lastValidPlaybackPosition.coerceAtLeast(0L)
-                                scope.launch {
-                                    val freshSources = withContext(Dispatchers.IO) {
-                                        StreamTokenManager.forceRefreshSources()
-                                    }
-                                    val targetSource = freshSources.getOrNull(selectedSourceIndex)
-                                        ?: freshSources.firstOrNull()
-                                        ?: currentSource
-                                    if (targetSource != null && targetSource.url.isNotBlank()) {
-                                        reconnectingMessage = "Resuming playback..."
-                                        val mediaItem = MediaItem.Builder()
-                                            .setMediaId(targetSource.url)
-                                            .setUri(targetSource.url)
-                                            .build()
-                                        exoPlayer.setMediaItem(mediaItem, safePos)
-                                        exoPlayer.prepare()
-                                        exoPlayer.play()
-                                    }
-                                    onRefreshStream(safePos)
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = LogoRed),
-                            modifier = Modifier.height(38.dp)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Refresh Stream", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                hasError = false
-                                isBuffering = true
-                                autoRetryCount = 0
-                                scope.launch {
-                                    try {
-                                        val url = currentSource?.url
-                                        val safePos = lastValidPlaybackPosition.coerceAtLeast(0L)
-                                        if (!url.isNullOrBlank()) {
-                                            val mediaItem = MediaItem.Builder().setMediaId(url).setUri(url).build()
-                                            exoPlayer.setMediaItem(mediaItem, safePos)
-                                        } else if (safePos > 0L) {
-                                            exoPlayer.seekTo(safePos)
-                                        }
-                                        exoPlayer.prepare()
-                                        exoPlayer.play()
-                                    } catch (_: Exception) {
-                                        onRefreshStream(lastValidPlaybackPosition)
-                                        streamReloadTrigger++
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                            modifier = Modifier.height(38.dp)
-                        ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            val resumeTime = formatTime(lastValidPlaybackPosition)
-                            Text(
-                                if (lastValidPlaybackPosition > 5000L) "Resume ($resumeTime)" else "Retry",
-                                fontSize = 12.sp
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = "Error",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(40.dp)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "Playback Interrupted",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                        }
-
-                        if (sources.size > 1) {
-                            OutlinedButton(
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = errorMessage ?: "Unable to stream. Stream connection was interrupted.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
                                 onClick = {
-                                    selectedSourceIndex = (selectedSourceIndex + 1) % sources.size
                                     hasError = false
                                     isBuffering = true
                                     autoRetryCount = 0
-                                    streamReloadTrigger++
+                                    reconnectingMessage = "Fetching fresh stream token..."
+                                    val safePos = lastValidPlaybackPosition.coerceAtLeast(0L)
+                                    scope.launch {
+                                        val freshSources = withContext(Dispatchers.IO) {
+                                            StreamTokenManager.forceRefreshSources()
+                                        }
+                                        val targetSource = freshSources.getOrNull(selectedSourceIndex)
+                                            ?: freshSources.firstOrNull()
+                                            ?: currentSource
+                                        if (targetSource != null && targetSource.url.isNotBlank()) {
+                                            reconnectingMessage = "Resuming playback..."
+                                            val mediaItem = MediaItem.Builder()
+                                                .setMediaId(targetSource.url)
+                                                .setUri(targetSource.url)
+                                                .build()
+                                            exoPlayer.setMediaItem(mediaItem, safePos)
+                                            exoPlayer.prepare()
+                                            exoPlayer.play()
+                                        }
+                                        onRefreshStream(safePos)
+                                    }
                                 },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFE9C16C)),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                ),
                                 modifier = Modifier.height(38.dp)
                             ) {
-                                val nextSrc = sources.getOrNull((selectedSourceIndex + 1) % sources.size)
-                                Text("Try ${nextSrc?.resolution ?: "Quality"}", fontSize = 12.sp)
+                                Icon(Icons.Default.Refresh, contentDescription = "Refresh Stream", modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Refresh Stream", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
-                        }
 
-                        if (isLandscape) {
                             OutlinedButton(
-                                onClick = { toggleOrientation() },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.7f)),
+                                onClick = {
+                                    hasError = false
+                                    isBuffering = true
+                                    autoRetryCount = 0
+                                    scope.launch {
+                                        try {
+                                            val url = currentSource?.url
+                                            val safePos = lastValidPlaybackPosition.coerceAtLeast(0L)
+                                            if (!url.isNullOrBlank()) {
+                                                val mediaItem = MediaItem.Builder().setMediaId(url).setUri(url).build()
+                                                exoPlayer.setMediaItem(mediaItem, safePos)
+                                            } else if (safePos > 0L) {
+                                                exoPlayer.seekTo(safePos)
+                                            }
+                                            exoPlayer.prepare()
+                                            exoPlayer.play()
+                                        } catch (_: Exception) {
+                                            onRefreshStream(lastValidPlaybackPosition)
+                                            streamReloadTrigger++
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
                                 modifier = Modifier.height(38.dp)
                             ) {
-                                Text("Exit Fullscreen", fontSize = 12.sp)
+                                Icon(Icons.Default.PlayArrow, contentDescription = "Resume", modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                val resumeTime = formatTime(lastValidPlaybackPosition)
+                                Text(
+                                    if (lastValidPlaybackPosition > 5000L) "Resume ($resumeTime)" else "Retry",
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            if (sources.size > 1) {
+                                OutlinedButton(
+                                    onClick = {
+                                        selectedSourceIndex = (selectedSourceIndex + 1) % sources.size
+                                        hasError = false
+                                        isBuffering = true
+                                        autoRetryCount = 0
+                                        streamReloadTrigger++
+                                    },
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier.height(38.dp)
+                                ) {
+                                    val nextSrc = sources.getOrNull((selectedSourceIndex + 1) % sources.size)
+                                    Text("Try ${nextSrc?.resolution ?: "Quality"}", fontSize = 12.sp)
+                                }
+                            }
+
+                            if (isLandscape) {
+                                OutlinedButton(
+                                    onClick = { toggleOrientation() },
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                                    modifier = Modifier.height(38.dp)
+                                ) {
+                                    Text("Exit Fullscreen", fontSize = 12.sp)
+                                }
                             }
                         }
                     }
@@ -798,7 +835,7 @@ fun VideoPlayer(
             }
         }
 
-        // Lock Toggle Button (Landscape only or when locked, never in PiP)
+        // Lock Toggle Button
         AnimatedVisibility(
             visible = !isInPip && ((controlsVisible && isLandscape) || isLocked),
             enter = fadeIn(tween(150)),
@@ -810,13 +847,17 @@ fun VideoPlayer(
             IconButton(
                 onClick = { isLocked = !isLocked },
                 modifier = Modifier
-                    .size(42.dp)
-                    .background(Color.Black.copy(alpha = 0.65f), CircleShape)
+                    .size(44.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                        CircleShape
+                    )
+                    .then(if (isHighContrast) Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape) else Modifier)
             ) {
                 Icon(
                     imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                    contentDescription = if (isLocked) "Unlock" else "Lock Controls",
-                    tint = if (isLocked) Color(0xFFE9C16C) else Color.White,
+                    contentDescription = if (isLocked) "Unlock controls" else "Lock controls",
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -834,9 +875,9 @@ fun VideoPlayer(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color.Black.copy(alpha = 0.8f),
+                                Color.Black.copy(alpha = 0.8f), // legibility-ok: over video scrim
                                 Color.Transparent,
-                                Color.Black.copy(alpha = 0.85f)
+                                Color.Black.copy(alpha = 0.85f) // legibility-ok: over video scrim
                             )
                         )
                     )
@@ -865,7 +906,7 @@ fun VideoPlayer(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White,
+                            tint = Color.White, // legibility-ok: over video scrim
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -877,7 +918,7 @@ fun VideoPlayer(
                             text = title,
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = Color.White // legibility-ok: over video scrim
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -886,7 +927,7 @@ fun VideoPlayer(
                             Text(
                                 text = subtitleInfo,
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = LogoRed,
+                                    color = Color.White.copy(alpha = 0.85f), // legibility-ok: over video scrim
                                     fontSize = 11.sp
                                 ),
                                 maxLines = 1,
@@ -906,15 +947,15 @@ fun VideoPlayer(
                                 }
                             }
                         ) {
-                            Icon(Icons.Default.AspectRatio, contentDescription = "Aspect Ratio", tint = Color.White)
+                            Icon(Icons.Default.AspectRatio, contentDescription = "Aspect Ratio", tint = Color.White) // legibility-ok: over video scrim
                         }
 
                         TextButton(onClick = { showSpeedDialog = true }) {
-                            Text("${playbackSpeed}x", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text("${playbackSpeed}x", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp) // legibility-ok: over video scrim
                         }
 
                         IconButton(onClick = { showSubtitleDialog = true }) {
-                            Icon(Icons.Default.ClosedCaption, contentDescription = "Subtitles", tint = if (selectedCaptionIndex >= 0) LogoRed else Color.White)
+                            Icon(Icons.Default.ClosedCaption, contentDescription = "Subtitles", tint = Color.White) // legibility-ok: over video scrim
                         }
 
                         // Floating Screen (PiP) button
@@ -933,7 +974,7 @@ fun VideoPlayer(
                                 Icon(
                                     imageVector = Icons.Default.PictureInPictureAlt,
                                     contentDescription = "Floating Screen (PiP)",
-                                    tint = PureWhite,
+                                    tint = Color.White, // legibility-ok: over video scrim
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -944,13 +985,13 @@ fun VideoPlayer(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
                                     .clickable { showQualityDialog = true },
-                                color = LogoRed
+                                color = MaterialTheme.colorScheme.primaryContainer
                             ) {
                                 Text(
                                     text = currentSource?.resolution ?: "AUTO",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                                         fontSize = 11.sp
                                     ),
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -959,7 +1000,6 @@ fun VideoPlayer(
                         }
                     } else {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // Floating Screen (PiP) button
                             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                                 IconButton(
                                     onClick = {
@@ -975,13 +1015,12 @@ fun VideoPlayer(
                                     Icon(
                                         imageVector = Icons.Default.PictureInPictureAlt,
                                         contentDescription = "Floating Screen (PiP)",
-                                        tint = PureWhite,
+                                        tint = Color.White, // legibility-ok: over video scrim
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }
 
-                            // Portrait settings button
                             IconButton(
                                 onClick = { showSettingsSheet = true },
                                 modifier = Modifier.size(38.dp)
@@ -989,7 +1028,7 @@ fun VideoPlayer(
                                 Icon(
                                     imageVector = Icons.Default.Settings,
                                     contentDescription = "Player Settings",
-                                    tint = PureWhite,
+                                    tint = Color.White, // legibility-ok: over video scrim
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -997,7 +1036,7 @@ fun VideoPlayer(
                     }
                 }
 
-                // CENTER CONTROLS (BALANCED & PERFECTLY CENTERED)
+                // CENTER CONTROLS
                 Row(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -1011,12 +1050,13 @@ fun VideoPlayer(
                             enabled = hasPreviousEpisode,
                             modifier = Modifier
                                 .size(44.dp)
-                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f), CircleShape)
+                                .then(if (isHighContrast) Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape) else Modifier)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SkipPrevious,
                                 contentDescription = "Previous Episode",
-                                tint = if (hasPreviousEpisode) Color.White else Color.White.copy(alpha = 0.3f),
+                                tint = if (hasPreviousEpisode) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -1032,21 +1072,21 @@ fun VideoPlayer(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Color(0x33000000), CircleShape)
-                            .border(1.dp, Color(0x22FFFFFF), CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f), CircleShape)
+                            .then(if (isHighContrast) Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape) else Modifier)
                     ) {
-                        Icon(Icons.Default.Replay10, contentDescription = "Rewind 10s", tint = Color.White, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Default.Replay10, contentDescription = "Rewind 10 seconds", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(28.dp))
                     }
 
                     Spacer(modifier = Modifier.width(28.dp))
 
-                    // Play / Pause Circle with Liquid Glass Border & Brand Gradient
+                    // Play / Pause Circle
                     Box(
                         modifier = Modifier
                             .size(60.dp)
                             .clip(CircleShape)
-                            .background(Brush.horizontalGradient(listOf(Color(0xFFFF2A55), Color(0xFFEE1E50))))
-                            .border(1.dp, Color(0x22FFFFFF), CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .then(if (isHighContrast) Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape) else Modifier)
                             .clickable {
                                 if (isPlaying) exoPlayer.pause() else exoPlayer.play()
                             }
@@ -1056,7 +1096,7 @@ fun VideoPlayer(
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (isPlaying) "Pause" else "Play",
-                            tint = PureWhite,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.size(34.dp)
                         )
                     }
@@ -1072,10 +1112,10 @@ fun VideoPlayer(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Color(0x33000000), CircleShape)
-                            .border(1.dp, Color(0x22FFFFFF), CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f), CircleShape)
+                            .then(if (isHighContrast) Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape) else Modifier)
                     ) {
-                        Icon(Icons.Default.Forward10, contentDescription = "Fast Forward 10s", tint = Color.White, modifier = Modifier.size(28.dp))
+                        Icon(Icons.Default.Forward10, contentDescription = "Fast forward 10 seconds", tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(28.dp))
                     }
 
                     if (isLandscape && isSeries) {
@@ -1085,12 +1125,13 @@ fun VideoPlayer(
                             enabled = hasNextEpisode,
                             modifier = Modifier
                                 .size(44.dp)
-                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f), CircleShape)
+                                .then(if (isHighContrast) Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape) else Modifier)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SkipNext,
                                 contentDescription = "Next Episode",
-                                tint = if (hasNextEpisode) Color.White else Color.White.copy(alpha = 0.3f),
+                                tint = if (hasNextEpisode) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -1113,9 +1154,9 @@ fun VideoPlayer(
                             exoPlayer.seekTo(currentPosition)
                         },
                         colors = SliderDefaults.colors(
-                            thumbColor = LogoRed,
-                            activeTrackColor = LogoRed,
-                            inactiveTrackColor = Color.White.copy(alpha = 0.25f)
+                            thumbColor = accentColor,
+                            activeTrackColor = accentColor,
+                            inactiveTrackColor = Color.White.copy(alpha = 0.3f) // legibility-ok: seek bar inactive track
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1131,13 +1172,12 @@ fun VideoPlayer(
                         Text(
                             text = "${formatTime(currentPosition)} / ${formatTime(duration)}",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color.White,
+                                color = Color.White, // legibility-ok: over video scrim
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 12.sp
                             )
                         )
 
-                        // Fullscreen / Rotate button
                         IconButton(
                             onClick = { toggleOrientation() },
                             modifier = Modifier
@@ -1147,7 +1187,7 @@ fun VideoPlayer(
                             Icon(
                                 imageVector = if (isLandscape) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
                                 contentDescription = if (isLandscape) "Exit Fullscreen" else "Fullscreen Landscape",
-                                tint = Color.White,
+                                tint = Color.White, // legibility-ok: over video scrim
                                 modifier = Modifier.size(26.dp)
                             )
                         }
@@ -1157,14 +1197,14 @@ fun VideoPlayer(
         }
     }
 
-    // SETTINGS DIALOG (Portrait mode settings)
+    // SETTINGS DIALOG
     if (showSettingsSheet) {
         AlertDialog(
             onDismissRequest = { showSettingsSheet = false },
             title = {
                 Text(
                     text = "Playback Settings",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White)
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 )
             },
             text = {
@@ -1174,13 +1214,16 @@ fun VideoPlayer(
                         .padding(top = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Quality Option
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0x33000000))
-                            .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .border(
+                                if (isHighContrast) 1.5.dp else 0.5.dp,
+                                MaterialTheme.colorScheme.outlineVariant,
+                                RoundedCornerShape(12.dp)
+                            )
                             .clickable {
                                 showSettingsSheet = false
                                 showQualityDialog = true
@@ -1192,18 +1235,21 @@ fun VideoPlayer(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Video Quality", fontWeight = FontWeight.Medium, color = Color.White)
-                            Text(currentSource?.resolution ?: "Auto", color = Color(0xFFE9C16C), fontWeight = FontWeight.Bold)
+                            Text("Video Quality", fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(currentSource?.resolution ?: "Auto", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                     }
 
-                    // Subtitles Option
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0x33000000))
-                            .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .border(
+                                if (isHighContrast) 1.5.dp else 0.5.dp,
+                                MaterialTheme.colorScheme.outlineVariant,
+                                RoundedCornerShape(12.dp)
+                            )
                             .clickable {
                                 showSettingsSheet = false
                                 showSubtitleDialog = true
@@ -1215,19 +1261,22 @@ fun VideoPlayer(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Subtitles & Style", fontWeight = FontWeight.Medium, color = Color.White)
+                            Text("Subtitles & Style", fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                             val subName = if (selectedCaptionIndex >= 0) captions.getOrNull(selectedCaptionIndex)?.lanName ?: "On" else "Off"
-                            Text("$subName • ${(captionBgOpacity * 100).roundToInt()}% bg", color = Color(0xFFE9C16C), fontWeight = FontWeight.Bold)
+                            Text("$subName • ${(captionBgOpacity * 100).roundToInt()}% bg", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                     }
 
-                    // Speed Option
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0x33000000))
-                            .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .border(
+                                if (isHighContrast) 1.5.dp else 0.5.dp,
+                                MaterialTheme.colorScheme.outlineVariant,
+                                RoundedCornerShape(12.dp)
+                            )
                             .clickable {
                                 showSettingsSheet = false
                                 showSpeedDialog = true
@@ -1239,18 +1288,21 @@ fun VideoPlayer(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Playback Speed", fontWeight = FontWeight.Medium, color = Color.White)
-                            Text("${playbackSpeed}x", color = Color(0xFFE9C16C), fontWeight = FontWeight.Bold)
+                            Text("Playback Speed", fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("${playbackSpeed}x", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                     }
 
-                    // Aspect Ratio Option
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0x33000000))
-                            .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .border(
+                                if (isHighContrast) 1.5.dp else 0.5.dp,
+                                MaterialTheme.colorScheme.outlineVariant,
+                                RoundedCornerShape(12.dp)
+                            )
                             .clickable {
                                 currentResizeMode = when (currentResizeMode) {
                                     ResizeMode.FIT -> ResizeMode.ZOOM
@@ -1265,18 +1317,18 @@ fun VideoPlayer(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Aspect Ratio", fontWeight = FontWeight.Medium, color = Color.White)
-                            Text(currentResizeMode.label, color = Color(0xFFE9C16C), fontWeight = FontWeight.Bold)
+                            Text("Aspect Ratio", fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(currentResizeMode.label, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showSettingsSheet = false }) {
-                    Text("Close", color = LogoRed)
+                    Text("Close", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF000000),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = RoundedCornerShape(20.dp)
         )
     }
@@ -1285,20 +1337,22 @@ fun VideoPlayer(
     if (showQualityDialog) {
         AlertDialog(
             onDismissRequest = { showQualityDialog = false },
-            title = { Text(text = "Video Resolution", fontWeight = FontWeight.Bold, color = Color.White) },
+            title = { Text(text = "Video Resolution", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     sources.forEachIndexed { index, source ->
                         val isSelected = index == selectedSourceIndex
+                        val selColors = selectableColors(isSelected)
+                        val shape = RoundedCornerShape(12.dp)
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) LogoRed.copy(alpha = 0.22f) else Color(0x33000000))
+                                .clip(shape)
+                                .background(selColors.container)
                                 .border(
-                                    1.dp,
-                                    if (isSelected) LogoRed else Color(0x22FFFFFF),
-                                    RoundedCornerShape(12.dp)
+                                    if (isHighContrast) 1.5.dp else if (isSelected) 1.dp else 0.5.dp,
+                                    selColors.border,
+                                    shape
                                 )
                                 .clickable {
                                     selectedSourceIndex = index
@@ -1315,18 +1369,18 @@ fun VideoPlayer(
                                     Icon(
                                         imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                                         contentDescription = null,
-                                        tint = if (isSelected) LogoRed else Color.White.copy(alpha = 0.7f),
+                                        tint = selColors.content,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Text(
                                         text = source.resolution,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = Color.White
+                                        color = selColors.content
                                     )
                                 }
                                 source.formattedSize?.let { sz ->
-                                    Text(text = sz, style = MaterialTheme.typography.bodySmall.copy(color = Color.White.copy(alpha = 0.7f)))
+                                    Text(text = sz, style = MaterialTheme.typography.bodySmall.copy(color = selColors.secondaryContent))
                                 }
                             }
                         }
@@ -1335,10 +1389,10 @@ fun VideoPlayer(
             },
             confirmButton = {
                 TextButton(onClick = { showQualityDialog = false }) {
-                    Text("Cancel", color = LogoRed)
+                    Text("Cancel", color = MaterialTheme.colorScheme.primary)
                 }
             },
-            containerColor = Color(0xFF000000),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = RoundedCornerShape(20.dp)
         )
     }
@@ -1349,7 +1403,7 @@ fun VideoPlayer(
             onDismissRequest = { showSubtitleDialog = false },
             title = {
                 Column {
-                    Text(text = "Subtitles & Captions", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(text = "Subtitles & Captions", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1357,14 +1411,14 @@ fun VideoPlayer(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (subtitleDialogTab == 0) LogoRed else Color(0xFF1E1E1E),
+                            color = if (subtitleDialogTab == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
                             modifier = Modifier
                                 .weight(1f)
                                 .clickable { subtitleDialogTab = 0 }
                         ) {
                             Text(
                                 text = "Tracks",
-                                color = if (subtitleDialogTab == 0) Color.White else Color.White.copy(alpha = 0.7f),
+                                color = if (subtitleDialogTab == 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 textAlign = TextAlign.Center,
@@ -1373,14 +1427,14 @@ fun VideoPlayer(
                         }
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (subtitleDialogTab == 1) LogoRed else Color(0xFF1E1E1E),
+                            color = if (subtitleDialogTab == 1) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
                             modifier = Modifier
                                 .weight(1f)
                                 .clickable { subtitleDialogTab = 1 }
                         ) {
                             Text(
                                 text = "Style & Transparency",
-                                color = if (subtitleDialogTab == 1) Color.White else Color.White.copy(alpha = 0.7f),
+                                color = if (subtitleDialogTab == 1) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 textAlign = TextAlign.Center,
@@ -1399,10 +1453,12 @@ fun VideoPlayer(
                             .heightIn(max = 300.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        // Turn Off option
+                        val isOffSelected = selectedCaptionIndex == -1
+                        val offColors = selectableColors(isOffSelected)
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (selectedCaptionIndex == -1) LogoRed.copy(alpha = 0.2f) else Color(0xFF1E1E1E),
+                            color = offColors.container,
+                            border = BorderStroke(if (isHighContrast) 1.5.dp else 0.5.dp, offColors.border),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -1415,26 +1471,27 @@ fun VideoPlayer(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = if (selectedCaptionIndex == -1) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                    imageVector = if (isOffSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                                     contentDescription = null,
-                                    tint = if (selectedCaptionIndex == -1) LogoRed else Color.White.copy(alpha = 0.7f),
+                                    tint = offColors.content,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text("Off", color = Color.White)
+                                Text("Off", color = offColors.content, fontWeight = if (isOffSelected) FontWeight.Bold else FontWeight.Normal)
                             }
                         }
 
-                        // Available captions (with prominent Hindi highlight)
                         captions.forEachIndexed { index, caption ->
                             val isHindi = caption.lan == "hi" ||
                                     caption.lanName?.contains("हिन्दी") == true ||
                                     caption.lanName?.contains("Hindi", ignoreCase = true) == true
+                            val isSelected = index == selectedCaptionIndex
+                            val capColors = selectableColors(isSelected)
 
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (index == selectedCaptionIndex) LogoRed.copy(alpha = 0.2f) else if (isHindi) Color(0xFFE9C16C).copy(alpha = 0.08f) else Color(0xFF1E1E1E),
-                                border = if (isHindi) androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE9C16C).copy(alpha = 0.4f)) else null,
+                                color = capColors.container,
+                                border = BorderStroke(if (isHighContrast) 1.5.dp else if (isHindi || isSelected) 1.dp else 0.5.dp, capColors.border),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
@@ -1447,26 +1504,26 @@ fun VideoPlayer(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = if (index == selectedCaptionIndex) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                        imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                                         contentDescription = null,
-                                        tint = if (index == selectedCaptionIndex) LogoRed else if (isHindi) Color(0xFFE9C16C) else Color.White.copy(alpha = 0.7f),
+                                        tint = capColors.content,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Text(
                                         text = if (isHindi) "🇮🇳 हिन्दी (Hindi)" else (caption.lanName ?: caption.lan ?: "Subtitle"),
-                                        color = if (isHindi) Color(0xFFE9C16C) else Color.White,
-                                        fontWeight = if (isHindi || index == selectedCaptionIndex) FontWeight.Bold else FontWeight.Normal,
+                                        color = capColors.content,
+                                        fontWeight = if (isHindi || isSelected) FontWeight.Bold else FontWeight.Normal,
                                         modifier = Modifier.weight(1f)
                                     )
                                     if (isHindi) {
                                         Surface(
                                             shape = RoundedCornerShape(4.dp),
-                                            color = Color(0xFFE9C16C).copy(alpha = 0.25f)
+                                            color = MaterialTheme.colorScheme.tertiaryContainer
                                         ) {
                                             Text(
                                                 text = "Hindi Sub",
-                                                color = Color(0xFFE9C16C),
+                                                color = MaterialTheme.colorScheme.onTertiaryContainer,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -1480,7 +1537,7 @@ fun VideoPlayer(
                         if (captions.isEmpty()) {
                             Text(
                                 text = "No subtitle tracks available for this title.",
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color.White.copy(alpha = 0.7f)),
+                                style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                                 modifier = Modifier.padding(vertical = 8.dp)
                             )
                         }
@@ -1494,15 +1551,14 @@ fun VideoPlayer(
                             .heightIn(max = 350.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        // Live Preview Box
                         Text(
                             text = "Live Preview",
-                            style = MaterialTheme.typography.labelMedium.copy(color = Color.White.copy(alpha = 0.7f), fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                         )
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFF141419),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2E2E38)),
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Box(
@@ -1513,16 +1569,16 @@ fun VideoPlayer(
                             ) {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = Color.Black.copy(alpha = captionBgOpacity)
+                                    color = Color.Black.copy(alpha = captionBgOpacity) // legibility-ok: subtitles
                                 ) {
                                     Text(
                                         text = "Sample Subtitle / ক্যাপশন প্রিভিউ",
                                         style = MaterialTheme.typography.bodyMedium.copy(
-                                            color = Color.White.copy(alpha = captionTextOpacity),
+                                            color = Color.White.copy(alpha = captionTextOpacity), // legibility-ok: subtitles
                                             fontWeight = FontWeight.Bold,
                                             shadow = if (captionBgOpacity < 0.40f) {
                                                 Shadow(
-                                                    color = Color.Black.copy(alpha = 0.95f),
+                                                    color = Color.Black.copy(alpha = 0.95f), // legibility-ok: subtitles
                                                     offset = Offset(2f, 2f),
                                                     blurRadius = 4f
                                                 )
@@ -1530,7 +1586,7 @@ fun VideoPlayer(
                                         ),
                                         modifier = Modifier.padding(
                                             horizontal = if (captionBgOpacity > 0.05f) 10.dp else 4.dp,
-                                            vertical = if (captionBgOpacity > 0.05f) 5.dp else 2.dp
+                                            vertical = if (captionBgOpacity > 0.05f) 6.dp else 2.dp
                                         ),
                                         textAlign = TextAlign.Center
                                     )
@@ -1546,11 +1602,11 @@ fun VideoPlayer(
                             ) {
                                 Text(
                                     text = "Background Opacity",
-                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, color = Color.White)
+                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 )
                                 Text(
                                     text = "${(captionBgOpacity * 100).roundToInt()}% (${if (captionBgOpacity == 0f) "Transparent" else if (captionBgOpacity >= 0.95f) "Solid" else "${(100 - (captionBgOpacity * 100)).roundToInt()}% transparent"})",
-                                    style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFE9C16C), fontWeight = FontWeight.Bold)
+                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                 )
                             }
                             Slider(
@@ -1561,9 +1617,9 @@ fun VideoPlayer(
                                 },
                                 valueRange = 0.0f..1.0f,
                                 colors = SliderDefaults.colors(
-                                    thumbColor = LogoRed,
-                                    activeTrackColor = LogoRed,
-                                    inactiveTrackColor = Color(0xFF1E1E1E)
+                                    thumbColor = accentColor,
+                                    activeTrackColor = accentColor,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                                 )
                             )
                             Row(
@@ -1578,10 +1634,11 @@ fun VideoPlayer(
                                     1.0f to "Solid"
                                 ).forEach { (preset, label) ->
                                     val isSelected = kotlin.math.abs(captionBgOpacity - preset) < 0.06f
+                                    val presetColors = selectableColors(isSelected)
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
-                                        color = if (isSelected) LogoRed.copy(alpha = 0.25f) else Color(0xFF1E1E1E),
-                                        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, LogoRed) else null,
+                                        color = presetColors.container,
+                                        border = if (isSelected || isHighContrast) BorderStroke(1.dp, presetColors.border) else null,
                                         modifier = Modifier
                                             .weight(1f)
                                             .clickable {
@@ -1591,7 +1648,7 @@ fun VideoPlayer(
                                     ) {
                                         Text(
                                             text = label,
-                                            color = if (isSelected) LogoRed else Color.White,
+                                            color = presetColors.content,
                                             fontSize = 11.sp,
                                             textAlign = TextAlign.Center,
                                             modifier = Modifier.padding(vertical = 5.dp)
@@ -1609,11 +1666,11 @@ fun VideoPlayer(
                             ) {
                                 Text(
                                     text = "Text Opacity",
-                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, color = Color.White)
+                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 )
                                 Text(
                                     text = "${(captionTextOpacity * 100).roundToInt()}% (${(100 - (captionTextOpacity * 100)).roundToInt()}% transparent)",
-                                    style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFE9C16C), fontWeight = FontWeight.Bold)
+                                    style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                 )
                             }
                             Slider(
@@ -1624,9 +1681,9 @@ fun VideoPlayer(
                                 },
                                 valueRange = 0.2f..1.0f,
                                 colors = SliderDefaults.colors(
-                                    thumbColor = LogoRed,
-                                    activeTrackColor = LogoRed,
-                                    inactiveTrackColor = Color(0xFF1E1E1E)
+                                    thumbColor = accentColor,
+                                    activeTrackColor = accentColor,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                                 )
                             )
                             Row(
@@ -1641,10 +1698,11 @@ fun VideoPlayer(
                                     1.0f to "100%"
                                 ).forEach { (preset, label) ->
                                     val isSelected = kotlin.math.abs(captionTextOpacity - preset) < 0.06f
+                                    val presetColors = selectableColors(isSelected)
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
-                                        color = if (isSelected) LogoRed.copy(alpha = 0.25f) else Color(0xFF1E1E1E),
-                                        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, LogoRed) else null,
+                                        color = presetColors.container,
+                                        border = if (isSelected || isHighContrast) BorderStroke(1.dp, presetColors.border) else null,
                                         modifier = Modifier
                                             .weight(1f)
                                             .clickable {
@@ -1654,7 +1712,7 @@ fun VideoPlayer(
                                     ) {
                                         Text(
                                             text = label,
-                                            color = if (isSelected) LogoRed else Color.White,
+                                            color = presetColors.content,
                                             fontSize = 11.sp,
                                             textAlign = TextAlign.Center,
                                             modifier = Modifier.padding(vertical = 5.dp)
@@ -1668,10 +1726,10 @@ fun VideoPlayer(
             },
             confirmButton = {
                 TextButton(onClick = { showSubtitleDialog = false }) {
-                    Text("Done", color = LogoRed)
+                    Text("Done", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = Color(0xFF000000)
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     }
 
@@ -1680,13 +1738,16 @@ fun VideoPlayer(
         val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
         AlertDialog(
             onDismissRequest = { showSpeedDialog = false },
-            title = { Text(text = "Playback Speed", fontWeight = FontWeight.Bold, color = Color.White) },
+            title = { Text(text = "Playback Speed", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     speeds.forEach { speed ->
+                        val isSelected = playbackSpeed == speed
+                        val selColors = selectableColors(isSelected)
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (playbackSpeed == speed) LogoRed.copy(alpha = 0.2f) else Color(0xFF1E1E1E),
+                            color = selColors.container,
+                            border = BorderStroke(if (isHighContrast) 1.5.dp else if (isSelected) 1.dp else 0.5.dp, selColors.border),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
@@ -1700,13 +1761,13 @@ fun VideoPlayer(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = if (playbackSpeed == speed) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                    imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                                     contentDescription = null,
-                                    tint = if (playbackSpeed == speed) LogoRed else Color.White.copy(alpha = 0.7f),
+                                    tint = selColors.content,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text("${speed}x", color = Color.White)
+                                Text("${speed}x", color = selColors.content, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                             }
                         }
                     }
@@ -1714,10 +1775,10 @@ fun VideoPlayer(
             },
             confirmButton = {
                 TextButton(onClick = { showSpeedDialog = false }) {
-                    Text("Cancel", color = LogoRed)
+                    Text("Cancel", color = MaterialTheme.colorScheme.primary)
                 }
             },
-            containerColor = Color(0xFF000000)
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     }
 }

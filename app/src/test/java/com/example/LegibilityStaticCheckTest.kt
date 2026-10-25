@@ -25,7 +25,6 @@ class LegibilityStaticCheckTest {
 
         rootDir.walk().filter { file ->
             file.isFile && file.extension == "kt" &&
-                    !file.path.contains("player") &&
                     !file.path.contains("theme")
         }.forEach { file ->
             val lines = file.readLines()
