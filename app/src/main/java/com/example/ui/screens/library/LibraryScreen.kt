@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,6 +17,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import com.example.ui.theme.LocalHighContrast
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Delete
@@ -60,50 +63,70 @@ private fun GlassTabRow(
     historyCount: Int,
     onTabSelected: (LibraryTab) -> Unit
 ) {
+    val isHighContrast = LocalHighContrast.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
+            .border(
+                width = if (isHighContrast) 1.5.dp else 0.5.dp,
+                color = if (isHighContrast) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant,
+                shape = RoundedCornerShape(16.dp)
+            )
             .padding(3.dp)
     ) {
-        Row {
-            LibraryTab.values().forEach { tab ->
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            LibraryTab.entries.forEach { tab ->
                 val isSelected = selectedTab == tab
                 val label = when (tab) {
                     LibraryTab.WATCHLIST -> "Watchlist ($watchlistCount)"
                     LibraryTab.HISTORY   -> "History ($historyCount)"
                 }
+                val shape = RoundedCornerShape(13.dp)
+                val containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                val border = if (isHighContrast) {
+                    BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)
+                } else if (isSelected) {
+                    BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+                } else {
+                    null
+                }
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(13.dp))
-                        .background(
-                            if (isSelected) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                Color.Transparent
-                            }
-                        )
-                        .border(
-                            width = if (isSelected) 1.dp else 0.dp,
-                            brush = if (isSelected) androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary)
-                            else androidx.compose.ui.graphics.SolidColor(Color.Transparent),
-                            shape = RoundedCornerShape(13.dp)
-                        )
+                        .clip(shape)
+                        .background(containerColor)
+                        .then(if (border != null) Modifier.border(border, shape) else Modifier)
                         .clickable { onTabSelected(tab) }
-                        .padding(vertical = 9.dp),
+                        .padding(vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 13.sp
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        if (isSelected && isHighContrast) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = contentColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = contentColor,
+                                fontSize = 13.sp
+                            )
                         )
-                    )
+                    }
                 }
             }
         }

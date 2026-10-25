@@ -526,11 +526,11 @@ fun DetailScreen(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(6.dp))
-                                                .background(Color(0x22EE1E50))
-                                                .border(0.7.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
+                                                .background(MaterialTheme.colorScheme.tertiaryContainer)
+                                                .border(0.7.dp, MaterialTheme.colorScheme.tertiary, RoundedCornerShape(6.dp))
                                                 .padding(horizontal = 7.dp, vertical = 3.dp)
                                         ) {
-                                            Text("🇮🇳 हिन्दी", color = MaterialTheme.colorScheme.onSurface, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                            Text("🇮🇳 हिन्दी", color = MaterialTheme.colorScheme.onTertiaryContainer, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }
