@@ -43,7 +43,7 @@ class ExampleRobolectricTest {
     @Test
     fun testAppNameString() {
         val appName = context.getString(R.string.app_name)
-        assertEquals("CinePulse", appName)
+        assertEquals("Zippy", appName)
     }
 
     @Test
