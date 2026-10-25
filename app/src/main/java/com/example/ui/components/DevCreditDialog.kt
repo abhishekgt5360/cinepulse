@@ -93,8 +93,8 @@ fun DevCreditDialog(
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.cinepulse_logo),
-                        contentDescription = "CinePulse Logo",
+                        painter = painterResource(R.drawable.zippy_logo),
+                        contentDescription = "Zippy Logo",
                         modifier = Modifier
                             .size(68.dp)
                             .clip(CircleShape)

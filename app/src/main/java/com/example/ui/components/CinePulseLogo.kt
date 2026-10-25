@@ -25,7 +25,7 @@ fun CinePulseLogo(
     taglineSize: TextUnit = 9.sp
 ) {
     Image(
-        painter = painterResource(id = R.drawable.cinepulse_logo_wide),
+        painter = painterResource(id = R.drawable.zippy_logo),
         contentDescription = "Zippy",
         modifier = modifier.height(iconSize),
         contentScale = ContentScale.Fit
