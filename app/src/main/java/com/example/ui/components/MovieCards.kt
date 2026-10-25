@@ -106,7 +106,7 @@ fun MoviePosterCard(
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.90f))
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.90f)) // legibility-ok: thumbnail gradient scrim
                         )
                     )
             )
@@ -220,7 +220,7 @@ fun ContinueWatchingCard(
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.80f))
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.80f)) // legibility-ok: thumbnail gradient scrim
                         )
                     )
             )
@@ -250,14 +250,14 @@ fun ContinueWatchingCard(
                     .size(24.dp)
                     .align(Alignment.TopEnd)
                     .clip(CircleShape)
-                    .background(Color(0x99000000))
+                    .background(Color(0x99000000)) // legibility-ok: delete icon backdrop scrim
                     .clickable { onDeleteClick() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Remove",
-                    tint = Color.White,
+                    tint = Color.White, // legibility-ok: icon over thumbnail scrim
                     modifier = Modifier.size(14.dp)
                 )
             }

@@ -160,7 +160,7 @@ fun DetailScreen(
                     .statusBarsPadding()
                     .aspectRatio(16f / 9f)
 
-                Box(modifier = playerModifier.background(Color.Black)) {
+                Box(modifier = playerModifier.background(Color.Black)) { // legibility-ok: player container
                     when {
                         uiState.isLoadingStream -> {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -255,7 +255,7 @@ fun DetailScreen(
                             .background(
                                 Brush.verticalGradient(
                                     colorStops = arrayOf(
-                                        0f    to Color(0x60000000),
+                                        0f    to Color(0x60000000), // legibility-ok: backdrop image scrim
                                         0.5f  to Color.Transparent,
                                         0.88f to MaterialTheme.colorScheme.background.copy(0.92f),
                                         1f    to MaterialTheme.colorScheme.background
@@ -304,7 +304,7 @@ fun DetailScreen(
                         }
                     }
 
-                    // Play FAB (Brand Gradient with PureWhite icon)
+                    // Play FAB (Brand Gradient with icon)
                     Box(
                         modifier = Modifier
                             .size(62.dp)

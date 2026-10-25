@@ -313,13 +313,13 @@ fun PosterBadge(text: String, modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
         modifier = modifier
             .clip(shape)
-            .background(Color.Black.copy(alpha = 0.75f), shape)
-            .then(if (highContrast) Modifier.border(1.dp, Color.White, shape) else Modifier)
+            .background(Color.Black.copy(alpha = 0.75f), shape) // legibility-ok: poster badge
+            .then(if (highContrast) Modifier.border(1.dp, Color.White, shape) else Modifier) // legibility-ok: poster badge
             .padding(horizontal = 9.dp, vertical = 4.dp)
     ) {
         Text(
             text = text,
-            color = Color.White,
+            color = Color.White, // legibility-ok: poster badge
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,

@@ -147,6 +147,7 @@ fun MainApp(
         mutableStateOf(!isInPipMode && DevCreditManager.shouldShowDialog(context))
     }
     var showAppearanceScreen by remember { mutableStateOf(false) }
+    var showThemeQaScreen by remember { mutableStateOf(false) }
 
     if (showDevCreditDialog && !isInPipMode) {
         DevCreditDialog(
@@ -159,9 +160,11 @@ fun MainApp(
     }
 
     // Handle back button: In landscape, exit fullscreen back to portrait first
-    BackHandler(enabled = !isInPipMode && (isLandscape || isDetailOpen || showAppearanceScreen || currentTab != AppTab.HOME)) {
+    BackHandler(enabled = !isInPipMode && (isLandscape || isDetailOpen || showThemeQaScreen || showAppearanceScreen || currentTab != AppTab.HOME)) {
         if (isLandscape) {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } else if (showThemeQaScreen) {
+            showThemeQaScreen = false
         } else if (showAppearanceScreen) {
             showAppearanceScreen = false
         } else if (isDetailOpen) {
@@ -241,11 +244,16 @@ fun MainApp(
                 .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
         ) {
-            if (showAppearanceScreen) {
+            if (showThemeQaScreen) {
+                com.example.ui.screens.appearance.ThemeQaWrapper(
+                    onBackClick = { showThemeQaScreen = false }
+                )
+            } else if (showAppearanceScreen) {
                 com.example.ui.screens.appearance.AppearanceScreen(
                     currentThemeMode = viewModel.themeMode.collectAsStateWithLifecycle().value,
                     onThemeSelected = { viewModel.setThemeMode(it) },
-                    onBackClick = { showAppearanceScreen = false }
+                    onBackClick = { showAppearanceScreen = false },
+                    onOpenThemeQa = if (BuildConfig.DEBUG) { { showThemeQaScreen = true } } else null
                 )
             } else if (isDetailOpen) {
                 DetailScreen(

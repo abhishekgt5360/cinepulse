@@ -161,7 +161,7 @@ private fun HeroBannerSlide(
                 .align(Alignment.TopCenter)
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0x75000000), Color.Transparent)
+                        listOf(Color(0x75000000), Color.Transparent) // legibility-ok: hero image vignette
                     )
                 )
         )
@@ -175,8 +175,8 @@ private fun HeroBannerSlide(
                         colorStops = arrayOf(
                             0.00f to Color.Transparent,
                             0.25f to Color.Transparent,
-                            0.60f to Color.Black.copy(alpha = 0.60f),
-                            0.85f to Color.Black.copy(alpha = 0.85f),
+                            0.60f to Color.Black.copy(alpha = 0.60f), // legibility-ok: hero image scrim
+                            0.85f to Color.Black.copy(alpha = 0.85f), // legibility-ok: hero image scrim
                             1.00f to MaterialTheme.colorScheme.background
                         )
                     )
@@ -198,7 +198,7 @@ private fun HeroBannerSlide(
             // Movie/Show Title
             Text(
                 text       = item.safeName,
-                color      = Color.White,
+                color      = Color.White, // legibility-ok: text over hero image scrim
                 fontSize   = 26.sp,
                 fontWeight = FontWeight.ExtraBold,
                 maxLines   = 2,

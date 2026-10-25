@@ -2,6 +2,7 @@ package com.example.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -44,6 +45,38 @@ fun selectableColors(selected: Boolean): SelectableColors {
         border = if (isHighContrast) c.outline else c.outlineVariant,
         accent = c.primary
     )
+}
+
+fun calculateLuminance(color: Color): Double {
+    fun convert(channel: Float): Double {
+        val c = channel.toDouble()
+        return if (c <= 0.04045) c / 12.92 else Math.pow((c + 0.055) / 1.055, 2.4)
+    }
+    val r = convert(color.red)
+    val g = convert(color.green)
+    val b = convert(color.blue)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+fun calculateContrastRatio(c1: Color, c2: Color): Double {
+    val l1 = calculateLuminance(c1)
+    val l2 = calculateLuminance(c2)
+    val maxL = maxOf(l1, l2)
+    val minL = minOf(l1, l2)
+    return (maxL + 0.05) / (minL + 0.05)
+}
+
+fun isColorSchemeValid(scheme: androidx.compose.material3.ColorScheme, minTextRatio: Double = 4.5): Boolean {
+    val pairs = listOf(
+        scheme.onSurface to scheme.surface,
+        scheme.onSurfaceVariant to scheme.surfaceContainer,
+        scheme.onPrimary to scheme.primary,
+        scheme.onPrimaryContainer to scheme.primaryContainer,
+        scheme.onSecondaryContainer to scheme.secondaryContainer,
+        scheme.onTertiaryContainer to scheme.tertiaryContainer,
+        scheme.onError to scheme.error
+    )
+    return pairs.all { (fg, bg) -> calculateContrastRatio(fg, bg) >= minTextRatio }
 }
 
 val CrimsonScheme = darkColorScheme(
@@ -198,7 +231,8 @@ fun CinePulseTheme(
     val colorScheme = when (mode) {
         ThemeMode.DYNAMIC -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                dynamicDarkColorScheme(context)
+                val dynScheme = dynamicDarkColorScheme(context)
+                if (isColorSchemeValid(dynScheme)) dynScheme else CrimsonScheme
             } else {
                 CrimsonScheme
             }
@@ -226,7 +260,10 @@ fun CinePulseTheme(
         }
     }
 
-    CompositionLocalProvider(LocalHighContrast provides (mode == ThemeMode.HIGH_CONTRAST)) {
+    CompositionLocalProvider(
+        LocalHighContrast provides (mode == ThemeMode.HIGH_CONTRAST),
+        LocalContentColor provides colorScheme.onBackground
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,

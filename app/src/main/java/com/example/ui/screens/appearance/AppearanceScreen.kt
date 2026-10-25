@@ -28,7 +28,8 @@ import com.example.ui.theme.ThemeMode
 fun AppearanceScreen(
     currentThemeMode: ThemeMode,
     onThemeSelected: (ThemeMode) -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onOpenThemeQa: (() -> Unit)? = null
 ) {
     Scaffold(
         topBar = {
@@ -67,7 +68,7 @@ fun AppearanceScreen(
                 selected = currentThemeMode == ThemeMode.CRIMSON,
                 onClick = { onThemeSelected(ThemeMode.CRIMSON) },
                 primarySwatch = MaterialTheme.colorScheme.primary,
-                backgroundSwatch = Color(0xFF1A1112)
+                backgroundSwatch = Color(0xFF1A1112) // legibility-ok: theme swatch preview
             )
 
             // OLED Option
@@ -117,6 +118,16 @@ fun AppearanceScreen(
                 backgroundSwatch = PaperScheme.background,
                 outlineSwatch = PaperScheme.primary
             )
+
+            if (onOpenThemeQa != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onOpenThemeQa,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Launch Theme QA Inspector", fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
