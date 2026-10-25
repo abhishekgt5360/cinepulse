@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
@@ -58,8 +59,7 @@ fun DevCreditDialog(
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
                 .clip(RoundedCornerShape(26.dp))
-                .background(LiquidGlassSurfaceElevated)
-                .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(26.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .testTag("dev_credit_dialog")
         ) {
             // Specular sheen top stripe
@@ -71,7 +71,7 @@ fun DevCreditDialog(
                         Brush.horizontalGradient(
                             listOf(
                                 Color.Transparent,
-                                LiquidGlassSpecularHighlight,
+                                MaterialTheme.colorScheme.onSurface,
                                 Color.Transparent
                             )
                         )
@@ -89,8 +89,7 @@ fun DevCreditDialog(
                     modifier = Modifier
                         .size(72.dp)
                         .clip(CircleShape)
-                        .background(LiquidGlassSurface)
-                        .border(1.dp, LiquidGlassBorderBrush, CircleShape),
+                        .background(MaterialTheme.colorScheme.surfaceContainer),
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
@@ -107,14 +106,13 @@ fun DevCreditDialog(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(999.dp))
-                        .background(CinemaAmber.copy(alpha = 0.15f))
-                        .border(0.7.dp, CinemaAmber.copy(alpha = 0.5f), RoundedCornerShape(999.dp))
+                        .background(MaterialTheme.colorScheme.tertiaryContainer)
                         .padding(horizontal = 10.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = "APPLICATION DEVELOPER",
                         style = MaterialTheme.typography.labelSmall.copy(
-                            color = CinemaAmber,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 1.sp,
                             fontSize = 10.sp
@@ -127,7 +125,7 @@ fun DevCreditDialog(
                 Text(
                     text = DevCreditManager.DEV_NAME,
                     style = MaterialTheme.typography.titleLarge.copy(
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 20.sp
                     ),
@@ -139,7 +137,7 @@ fun DevCreditDialog(
                 Text(
                     text = "Crafted with passion for cinema and anime streaming enthusiasts.",
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
                         lineHeight = 18.sp
                     ),
@@ -152,7 +150,7 @@ fun DevCreditDialog(
                 LiquidGlassButton(
                     text = "Visit Portfolio Website",
                     onClick = { showInAppBrowser = true },
-                    leadingIcon = Icons.AutoMirrored.Filled.OpenInNew,
+                    icon = Icons.AutoMirrored.Filled.OpenInNew,
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("dev_website_button")
@@ -165,8 +163,7 @@ fun DevCreditDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(LiquidGlassSurface)
-                        .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
                         .clickable { snoozeChecked = !snoozeChecked }
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
@@ -177,23 +174,23 @@ fun DevCreditDialog(
                             checked = snoozeChecked,
                             onCheckedChange = { snoozeChecked = it },
                             colors = CheckboxDefaults.colors(
-                                checkedColor = Color.White,
-                                checkmarkColor = PitchBlack,
-                                uncheckedColor = TextSecondary
+                                checkedColor = MaterialTheme.colorScheme.primary,
+                                checkmarkColor = MaterialTheme.colorScheme.onPrimary,
+                                uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Icon(
                             imageVector = Icons.Default.Schedule,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Don't show again for 7 days",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = TextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Medium
                             )
                         )
@@ -208,6 +205,7 @@ fun DevCreditDialog(
                     onClick = {
                         if (snoozeChecked) onSnooze7Days() else onDismiss()
                     },
+                    icon = Icons.AutoMirrored.Filled.ArrowForward,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

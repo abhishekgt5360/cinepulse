@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,7 +44,7 @@ import com.example.data.local.WatchHistoryEntity
 import com.example.data.local.WatchlistEntity
 import com.example.data.model.MovieItem
 import com.example.ui.components.*
-import com.example.ui.theme.*
+import androidx.compose.material3.MaterialTheme
 
 enum class LibraryTab {
     WATCHLIST,
@@ -64,8 +65,7 @@ private fun GlassTabRow(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(LiquidGlassSurface)
-            .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(3.dp)
     ) {
         Row {
@@ -81,19 +81,15 @@ private fun GlassTabRow(
                         .clip(RoundedCornerShape(13.dp))
                         .background(
                             if (isSelected) {
-                                Brush.horizontalGradient(CinemaRedGradient)
+                                MaterialTheme.colorScheme.primary
                             } else {
-                                Brush.horizontalGradient(
-                                    listOf(Color.Transparent, Color.Transparent)
-                                )
+                                Color.Transparent
                             }
                         )
                         .border(
                             width = if (isSelected) 1.dp else 0.dp,
-                            brush = if (isSelected) LiquidGlassActiveBorderBrush
-                            else Brush.horizontalGradient(
-                                listOf(Color.Transparent, Color.Transparent)
-                            ),
+                            brush = if (isSelected) androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary)
+                            else androidx.compose.ui.graphics.SolidColor(Color.Transparent),
                             shape = RoundedCornerShape(13.dp)
                         )
                         .clickable { onTabSelected(tab) }
@@ -104,7 +100,7 @@ private fun GlassTabRow(
                         text = label,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) PureWhite else TextSecondary,
+                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp
                         )
                     )
@@ -127,8 +123,7 @@ private fun WatchlistEmptyState(onExploreClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(24.dp))
-                .background(LiquidGlassSurface)
-                .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(32.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -137,14 +132,13 @@ private fun WatchlistEmptyState(onExploreClick: () -> Unit) {
                     modifier = Modifier
                         .size(72.dp)
                         .clip(RoundedCornerShape(22.dp))
-                        .background(LiquidGlassSurfaceElevated)
-                        .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(22.dp)),
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.BookmarkBorder,
                         contentDescription = null,
-                        tint = TextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(36.dp)
                     )
                 }
@@ -153,14 +147,14 @@ private fun WatchlistEmptyState(onExploreClick: () -> Unit) {
                     text = "Your Watchlist is empty",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Save movies and series you want to watch later.",
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
                 )
@@ -168,7 +162,7 @@ private fun WatchlistEmptyState(onExploreClick: () -> Unit) {
                 LiquidGlassButton(
                     text = "Discover Content",
                     onClick = onExploreClick,
-                    leadingIcon = Icons.Default.Explore,
+                    icon = Icons.Default.Explore,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
@@ -187,8 +181,7 @@ private fun HistoryEmptyState() {
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(24.dp))
-                .background(LiquidGlassSurface)
-                .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(32.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -197,14 +190,13 @@ private fun HistoryEmptyState() {
                     modifier = Modifier
                         .size(72.dp)
                         .clip(RoundedCornerShape(22.dp))
-                        .background(LiquidGlassSurfaceElevated)
-                        .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(22.dp)),
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.History,
                         contentDescription = null,
-                        tint = TextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(36.dp)
                     )
                 }
@@ -213,14 +205,14 @@ private fun HistoryEmptyState() {
                     text = "No Watch History",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Movies and episodes you watch will appear here to resume anytime.",
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
                 )
@@ -241,8 +233,7 @@ private fun HistoryRowCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(LiquidGlassSurface)
-            .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
             .clickable { onResumeClick() }
     ) {
         Row(
@@ -257,7 +248,7 @@ private fun HistoryRowCard(
                     .width(96.dp)
                     .height(62.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(CinemaSurfaceVariant)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -275,8 +266,7 @@ private fun HistoryRowCard(
                         .size(30.dp)
                         .align(Alignment.Center)
                         .clip(RoundedCornerShape(15.dp))
-                        .background(LiquidGlassSurface)
-                        .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(15.dp)),
+                        .background(MaterialTheme.colorScheme.surfaceContainer),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -297,7 +287,7 @@ private fun HistoryRowCard(
                         .fillMaxWidth()
                         .height(3.dp)
                         .align(Alignment.BottomCenter),
-                    color = BrandCoral,
+                    color = MaterialTheme.colorScheme.primary,
                     trackColor = Color.White.copy(alpha = 0.2f)
                 )
             }
@@ -309,7 +299,7 @@ private fun HistoryRowCard(
                     text = historyItem.title,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onSurface
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -318,7 +308,7 @@ private fun HistoryRowCard(
                     Text(
                         text = "Season ${historyItem.season} • Episode ${historyItem.episode}",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp
                         )
                     )
@@ -328,7 +318,7 @@ private fun HistoryRowCard(
                 Text(
                     text = if (durMin > 0) "Watched ${posMin}m of ${durMin}m" else "In Progress",
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp
                     )
                 )
@@ -339,7 +329,7 @@ private fun HistoryRowCard(
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Remove",
-                    tint = TextSecondary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -359,6 +349,7 @@ fun LibraryScreen(
     onClearHistory: () -> Unit,
     onExploreClick: () -> Unit,
     onOpenDevCredit: () -> Unit = {},
+    onAppearanceClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableStateOf(LibraryTab.WATCHLIST) }
@@ -367,7 +358,7 @@ fun LibraryScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
 
         // ── Header ────────────────────────────────────────────────────────────
@@ -383,18 +374,36 @@ fun LibraryScreen(
                 text = "My Library",
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontWeight = FontWeight.ExtraBold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Appearance Settings
+                IconButton(
+                    onClick = onAppearanceClick,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .testTag("library_appearance_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Appearance",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 // Dev credit — small glass icon button
                 Box(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(LiquidGlassSurface)
-                        .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
                         .clickable { onOpenDevCredit() }
                         .testTag("library_dev_credit_button"),
                     contentAlignment = Alignment.Center
@@ -414,13 +423,13 @@ fun LibraryScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(LiquidGlassSurface)
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
                             .border(
                                 1.dp,
                                 Brush.verticalGradient(
                                     listOf(
-                                        CinemaRed.copy(alpha = 0.70f),
-                                        CinemaRed.copy(alpha = 0.25f)
+                                        MaterialTheme.colorScheme.error.copy(alpha = 0.70f),
+                                        MaterialTheme.colorScheme.error.copy(alpha = 0.25f)
                                     )
                                 ),
                                 RoundedCornerShape(12.dp)
@@ -431,7 +440,7 @@ fun LibraryScreen(
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Clear History",
-                            tint = CinemaRed,
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -536,26 +545,26 @@ fun LibraryScreen(
                 Text(
                     text = "Clear Watch History?",
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
                 Text(
                     text = "This will remove all your saved playback positions and history.",
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             confirmButton = {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(LiquidGlassSurface)
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
                         .border(
                             1.dp,
                             Brush.verticalGradient(
                                 listOf(
-                                    CinemaRed.copy(alpha = 0.80f),
-                                    CinemaRed.copy(alpha = 0.30f)
+                                    MaterialTheme.colorScheme.error.copy(alpha = 0.80f),
+                                    MaterialTheme.colorScheme.error.copy(alpha = 0.30f)
                                 )
                             ),
                             RoundedCornerShape(10.dp)
@@ -568,7 +577,7 @@ fun LibraryScreen(
                 ) {
                     Text(
                         text = "Clear All",
-                        color = CinemaRed,
+                        color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -576,10 +585,10 @@ fun LibraryScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearHistoryDialog = false }) {
-                    Text("Cancel", color = TextSecondary)
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
-            containerColor = CinemaDark,
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(20.dp)
         )
     }

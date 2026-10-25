@@ -147,7 +147,7 @@ fun DetailScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // ── Video Player ─────────────────────────────────────────────────
@@ -164,12 +164,12 @@ fun DetailScreen(
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     CircularProgressIndicator(
-                                        color = CinemaRed,
+                                        color = MaterialTheme.colorScheme.primary,
                                         strokeWidth = 2.5.dp,
                                         modifier = Modifier.size(36.dp)
                                     )
                                     Spacer(Modifier.height(10.dp))
-                                    Text("Loading stream...", color = TextSecondary, fontSize = 13.sp)
+                                    Text("Loading stream...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                                 }
                             }
                         }
@@ -183,16 +183,16 @@ fun DetailScreen(
                                         Modifier.padding(24.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        Icon(Icons.Default.ErrorOutline, null, tint = CinemaAmber, modifier = Modifier.size(32.dp))
+                                        Icon(Icons.Default.ErrorOutline, null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(32.dp))
                                         Spacer(Modifier.height(8.dp))
-                                        Text("Stream Unavailable", color = TextPrimary, fontWeight = FontWeight.Bold)
+                                        Text("Stream Unavailable", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                                         Spacer(Modifier.height(6.dp))
-                                        Text(uiState.streamError ?: "No stream found.", color = TextSecondary, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                        Text(uiState.streamError ?: "No stream found.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                         Spacer(Modifier.height(14.dp))
                                         LiquidGlassButton(
                                             text = "Retry",
                                             onClick = { onPlayClick(uiState.selectedSeason, uiState.selectedEpisode) },
-                                            leadingIcon = Icons.Default.Refresh,
+                                            icon = Icons.Default.Refresh,
                                             modifier = Modifier.width(120.dp)
                                         )
                                     }
@@ -255,8 +255,8 @@ fun DetailScreen(
                                     colorStops = arrayOf(
                                         0f    to Color(0x60000000),
                                         0.5f  to Color.Transparent,
-                                        0.88f to CinemaBlack.copy(0.92f),
-                                        1f    to CinemaBlack
+                                        0.88f to MaterialTheme.colorScheme.background.copy(0.92f),
+                                        1f    to MaterialTheme.colorScheme.background
                                     )
                                 )
                             )
@@ -284,7 +284,7 @@ fun DetailScreen(
                                 icon = if (uiState.isWatchlisted) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                                 contentDescription = "Watchlist",
                                 onClick = onToggleWatchlist,
-                                tint = if (uiState.isWatchlisted) CinemaAmber else TextPrimary,
+                                tint = if (uiState.isWatchlisted) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.testTag("detail_watchlist_button")
                             )
                             GlassIconButton(
@@ -308,8 +308,8 @@ fun DetailScreen(
                             .size(62.dp)
                             .align(Alignment.Center)
                             .clip(CircleShape)
-                            .background(Brush.horizontalGradient(BrandButtonGradient))
-                            .border(1.dp, LiquidGlassBorderBrush, CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
                             .clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) {
                                 onPlayClick(
                                     if (uiState.isSeries) uiState.selectedSeason else 0,
@@ -319,7 +319,7 @@ fun DetailScreen(
                             .testTag("detail_play_fab"),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.PlayArrow, null, tint = PureWhite, modifier = Modifier.size(32.dp))
+                        Icon(Icons.Default.PlayArrow, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(32.dp))
                     }
                 }
             }
@@ -336,7 +336,7 @@ fun DetailScreen(
                     item {
                         Text(
                             text = uiState.title,
-                            color = TextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.ExtraBold,
                             lineHeight = 26.sp
@@ -352,30 +352,30 @@ fun DetailScreen(
                                 Row(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(CinemaSurface)
+                                        .background(MaterialTheme.colorScheme.surface)
                                         .padding(horizontal = 7.dp, vertical = 3.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.Star, null, tint = RatingGold, modifier = Modifier.size(12.dp))
+                                    Icon(Icons.Default.Star, null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(12.dp))
                                     Spacer(Modifier.width(3.dp))
-                                    Text(rating, color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text(rating, color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                             // Year
                             val year = subject?.releaseDate?.take(4)
                             if (!year.isNullOrBlank()) {
-                                Text(year, color = TextSecondary, fontSize = 13.sp)
+                                Text(year, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                             }
                             // Type label
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(5.dp))
-                                    .background(CinemaCyan.copy(0.15f))
+                                    .background(MaterialTheme.colorScheme.tertiary.copy(0.15f))
                                     .padding(horizontal = 7.dp, vertical = 3.dp)
                             ) {
                                 Text(
                                     text = if (uiState.isSeries) "Series" else "Movie",
-                                    color = CinemaCyan,
+                                    color = MaterialTheme.colorScheme.tertiary,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -383,13 +383,13 @@ fun DetailScreen(
                             // Duration
                             subject?.duration?.let { dur ->
                                 val mins = dur / 60
-                                if (mins > 0) Text("• ${mins}m", color = TextSecondary, fontSize = 13.sp)
+                                if (mins > 0) Text("• ${mins}m", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                             }
                         }
 
                         subject?.genre?.let { genre ->
                             Spacer(Modifier.height(6.dp))
-                            Text(genre, color = TextSecondary, fontSize = 12.sp)
+                            Text(genre, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                         }
 
                         Spacer(Modifier.height(16.dp))
@@ -416,7 +416,7 @@ fun DetailScreen(
                                         if (uiState.isSeries) uiState.selectedEpisode else 0
                                     )
                                 },
-                                leadingIcon = Icons.Default.PlayArrow,
+                                icon = Icons.Default.PlayArrow,
                                 modifier = Modifier.weight(1f).testTag("detail_watch_button")
                             )
 
@@ -425,8 +425,7 @@ fun DetailScreen(
                                 modifier = Modifier
                                     .height(46.dp)
                                     .clip(RoundedCornerShape(999.dp))
-                                    .background(LiquidGlassSurface)
-                                    .border(0.8.dp, LiquidGlassBorderBrush, RoundedCornerShape(999.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainer)
                                     .clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) {
                                         triggerDownload(
                                             if (uiState.isSeries) uiState.selectedSeason else 0,
@@ -438,11 +437,11 @@ fun DetailScreen(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     if (isFetchingDownload) {
-                                        CircularProgressIndicator(color = CinemaAmber, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
+                                        CircularProgressIndicator(color = MaterialTheme.colorScheme.tertiary, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
                                     } else {
-                                        Icon(Icons.Default.Download, null, tint = TextPrimary, modifier = Modifier.size(18.dp))
+                                        Icon(Icons.Default.Download, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
                                     }
-                                    Text("Download", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("Download", color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -453,11 +452,11 @@ fun DetailScreen(
                     item {
                         LiquidGlassCard(cornerRadius = 16.dp) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Text("Synopsis", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("Synopsis", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                                 Spacer(Modifier.height(8.dp))
                                 Text(
                                     text = subject?.description?.ifBlank { "No synopsis available." } ?: "No synopsis available.",
-                                    color = TextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontSize = 13.sp,
                                     lineHeight = 19.sp
                                 )
@@ -470,7 +469,7 @@ fun DetailScreen(
                     val stars = uiState.detail?.data?.stars.orEmpty()
                     if (stars.isNotEmpty()) {
                         item {
-                            Text("Cast & Crew", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Text("Cast & Crew", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(10.dp))
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 itemsIndexed(stars, key = { idx, star -> "${star.name ?: "star"}_$idx" }) { _, star ->
@@ -482,8 +481,8 @@ fun DetailScreen(
                                             modifier = Modifier
                                                 .size(58.dp)
                                                 .clip(CircleShape)
-                                                .background(CinemaSurfaceVariant)
-                                                .border(0.8.dp, LiquidGlassBorderBrush, CircleShape)
+                                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                .border(0.8.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                                         ) {
                                             AsyncImage(
                                                 model = ImageRequest.Builder(context).data(star.avatarUrl).crossfade(true).build(),
@@ -493,8 +492,8 @@ fun DetailScreen(
                                             )
                                         }
                                         Spacer(Modifier.height(5.dp))
-                                        Text(star.name ?: "", color = TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                                        Text(star.character ?: "", color = TextSecondary, fontSize = 9.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                        Text(star.name ?: "", color = MaterialTheme.colorScheme.onSurface, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                        Text(star.character ?: "", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 9.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                                     }
                                 }
                             }
@@ -519,16 +518,16 @@ fun DetailScreen(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Subtitles, null, tint = PureWhite, modifier = Modifier.size(18.dp))
+                                        Icon(Icons.Default.Subtitles, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(8.dp))
-                                        Text("Audio & Subtitles", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                        Text("Audio & Subtitles", color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                     }
                                     if (hasHindi) {
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(6.dp))
                                                 .background(Color(0x22EE1E50))
-                                                .border(0.7.dp, LiquidGlassActiveBorderBrush, RoundedCornerShape(6.dp))
+                                                .border(0.7.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
                                                 .padding(horizontal = 7.dp, vertical = 3.dp)
                                         ) {
                                             Text("🇮🇳 हिन्दी", color = PureWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -540,14 +539,14 @@ fun DetailScreen(
                                     val langNames = uiState.captions.mapNotNull { it.lanName ?: it.lan }.distinct()
                                     Text(
                                         text = "Subtitles in ${langNames.size} languages: ${langNames.take(4).joinToString(", ")}${if (langNames.size > 4) " +${langNames.size - 4} more" else ""}.",
-                                        color = TextSecondary,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 12.sp,
                                         lineHeight = 17.sp
                                     )
                                 } else {
                                     Text(
                                         text = "Multi-language subtitles available in player.",
-                                        color = TextSecondary,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 12.sp
                                     )
                                 }
@@ -564,17 +563,16 @@ fun DetailScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Episodes ($episodeCount)", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("Episodes ($episodeCount)", color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                                 if (episodeCount > 30) {
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(999.dp))
-                                            .background(LiquidGlassSurface)
-                                            .border(0.7.dp, LiquidGlassBorderBrush, RoundedCornerShape(999.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceContainer)
                                             .clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { showJumpDialog = true }
                                             .padding(horizontal = 12.dp, vertical = 5.dp)
                                     ) {
-                                        Text("Jump to Ep", color = PureWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text("Jump to Ep", color = MaterialTheme.colorScheme.onSurface, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -590,7 +588,7 @@ fun DetailScreen(
                                 ) {
                                     uiState.availableSeasons.forEach { season ->
                                         GlassChip(
-                                            text = "Season ${season.se}",
+                                            label = "Season ${season.se}",
                                             selected = uiState.selectedSeason == season.se,
                                             onClick = {
                                                 selectedChunkIndex = 0
@@ -614,7 +612,7 @@ fun DetailScreen(
                                         val start = c * chunkSize + 1
                                         val end = minOf((c + 1) * chunkSize, episodeCount)
                                         GlassChip(
-                                            text = "$start - $end",
+                                            label = "$start - $end",
                                             selected = selectedChunkIndex == c,
                                             onClick = { selectedChunkIndex = c }
                                         )
@@ -640,7 +638,7 @@ fun DetailScreen(
                                      )
                                      .border(
                                          if (isCurrentEp) 1.dp else 0.7.dp,
-                                         if (isCurrentEp) LiquidGlassActiveBorderBrush else LiquidGlassBorderBrush,
+                                         if (isCurrentEp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                          RoundedCornerShape(14.dp)
                                      )
                                      .clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) {
@@ -659,8 +657,8 @@ fun DetailScreen(
                                                  .size(34.dp)
                                                  .clip(CircleShape)
                                                  .then(
-                                                     if (isCurrentEp) Modifier.background(CinemaGradientBrush)
-                                                     else Modifier.background(LiquidGlassSurface).border(0.7.dp, LiquidGlassBorderBrush, CircleShape)
+                                                     if (isCurrentEp) Modifier.background(MaterialTheme.colorScheme.primary)
+                                                     else Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
                                                  ),
                                              contentAlignment = Alignment.Center
                                          ) {
@@ -670,13 +668,13 @@ fun DetailScreen(
                                          Column {
                                              Text(
                                                  text = "Episode $epNum",
-                                                 color = PureWhite,
+                                                 color = MaterialTheme.colorScheme.onSurface,
                                                  fontSize = 14.sp,
                                                  fontWeight = FontWeight.Bold
                                              )
                                              Text(
                                                  text = "Season ${currentSeason?.se ?: 1}",
-                                                 color = TextSecondary,
+                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                  fontSize = 11.sp
                                              )
                                          }
@@ -690,7 +688,7 @@ fun DetailScreen(
                                             icon = Icons.Default.Download,
                                             contentDescription = "Download",
                                             onClick = { currentSeason?.let { triggerDownload(it.se, epNum) } },
-                                            size = 32.dp,
+                                            modifier = Modifier.size(32.dp),
                                             tint = PureWhite
                                         )
                                     }
@@ -706,8 +704,8 @@ fun DetailScreen(
         if (showDownloadDialog && downloadSources.isNotEmpty()) {
             AlertDialog(
                 onDismissRequest = { showDownloadDialog = false },
-                containerColor = CinemaDark,
-                title = { Text("Select Download Quality", color = TextPrimary, fontWeight = FontWeight.Bold) },
+                containerColor = MaterialTheme.colorScheme.surface,
+                title = { Text("Select Download Quality", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         downloadSources.forEach { source ->
@@ -715,8 +713,7 @@ fun DetailScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(LiquidGlassSurface)
-                                    .border(0.7.dp, LiquidGlassBorderBrush, RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainer)
                                     .clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) {
                                         showDownloadDialog = false
                                         val (s, e) = downloadTargetEpisode ?: Pair(0, 0)
@@ -737,12 +734,12 @@ fun DetailScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.DownloadForOffline, null, tint = CinemaAmber, modifier = Modifier.size(20.dp))
+                                        Icon(Icons.Default.DownloadForOffline, null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(20.dp))
                                         Spacer(Modifier.width(10.dp))
-                                        Text(source.resolution, color = TextPrimary, fontWeight = FontWeight.Bold)
+                                        Text(source.resolution, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                                     }
                                     source.formattedSize?.let { sz ->
-                                        Text(sz, color = TextSecondary, fontSize = 12.sp)
+                                        Text(sz, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -751,7 +748,7 @@ fun DetailScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = { showDownloadDialog = false }) {
-                        Text("Cancel", color = TextSecondary)
+                        Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             )
@@ -765,22 +762,22 @@ fun DetailScreen(
 
             AlertDialog(
                 onDismissRequest = { showJumpDialog = false },
-                containerColor = CinemaDark,
-                title = { Text("Jump to Episode (1-$maxEp)", color = TextPrimary, fontWeight = FontWeight.Bold) },
+                containerColor = MaterialTheme.colorScheme.surface,
+                title = { Text("Jump to Episode (1-$maxEp)", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
                 text = {
                     Column {
-                        Text("Enter episode number:", color = TextSecondary, fontSize = 13.sp)
+                        Text("Enter episode number:", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
                         Spacer(Modifier.height(10.dp))
                         OutlinedTextField(
                             value = jumpInputText,
                             onValueChange = { if (it.all { c -> c.isDigit() }) jumpInputText = it },
-                            placeholder = { Text("e.g. 50, 200, $maxEp", color = TextSecondary) },
+                            placeholder = { Text("e.g. 50, 200, $maxEp", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = TextPrimary,
-                                unfocusedTextColor = TextPrimary,
-                                focusedBorderColor = CinemaRed,
-                                unfocusedBorderColor = CinemaBorder
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
                             ),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -796,12 +793,12 @@ fun DetailScreen(
                                 currentSeasonForJump?.let { onSelectEpisode(it.se, ep) }
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = CinemaRed)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) { Text("Jump", fontWeight = FontWeight.Bold) }
                 },
                 dismissButton = {
                     TextButton(onClick = { showJumpDialog = false }) {
-                        Text("Cancel", color = TextSecondary)
+                        Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             )

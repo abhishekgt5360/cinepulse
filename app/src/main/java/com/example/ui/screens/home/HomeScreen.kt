@@ -46,19 +46,19 @@ fun HomeScreen(
     // Loading state
     if (uiState.isLoading && uiState.sections.isEmpty() && uiState.bannerItems.isEmpty()) {
         Box(
-            modifier = modifier.fillMaxSize().background(JetBlack),
+            modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(
-                    color = BrandCoral,
+                    color = MaterialTheme.colorScheme.primary,
                     strokeWidth = 2.5.dp,
                     modifier = Modifier.size(38.dp)
                 )
                 Spacer(Modifier.height(14.dp))
                 Text(
                     text = "Loading CinePulse...",
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.5.sp
                 )
             }
@@ -69,24 +69,24 @@ fun HomeScreen(
     // Error state
     if (uiState.errorMessage != null && uiState.sections.isEmpty()) {
         Box(
-            modifier = modifier.fillMaxSize().background(JetBlack).padding(24.dp),
+            modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            LiquidGlassCard(cornerRadius = 24.dp) {
+            Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                 Column(
                     modifier = Modifier.padding(28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "Connection Error",
-                        color = PureWhite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = uiState.errorMessage,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
@@ -94,7 +94,7 @@ fun HomeScreen(
                     LiquidGlassButton(
                         text = "Retry",
                         onClick = onRetry,
-                        leadingIcon = Icons.Default.Refresh,
+                        icon = Icons.Default.Refresh,
                         modifier = Modifier.width(140.dp)
                     )
                 }
@@ -106,7 +106,7 @@ fun HomeScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(JetBlack)
+            .background(MaterialTheme.colorScheme.background)
             .testTag("home_feed_list"),
         contentPadding = PaddingValues(bottom = 100.dp)
     ) {
@@ -128,8 +128,7 @@ fun HomeScreen(
                     modifier = Modifier
                         .height(36.dp)
                         .clip(RoundedCornerShape(999.dp))
-                        .background(LiquidGlassSurface)
-                        .border(0.8.dp, LiquidGlassBorderBrush, RoundedCornerShape(999.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
                         .clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
@@ -140,13 +139,13 @@ fun HomeScreen(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = BrandOrange,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(15.dp)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "Search movies & shows...",
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -178,13 +177,13 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.PlayCircleOutline,
                             contentDescription = null,
-                            tint = BrandCoral,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = "Continue Watching",
-                            color = PureWhite,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -220,13 +219,13 @@ fun HomeScreen(
                             .height(18.dp)
                             .clip(RoundedCornerShape(999.dp))
                             .background(
-                                Brush.verticalGradient(listOf(BrandOrange, BrandCoral))
+                                Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer))
                             )
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = section.section,
-                        color = PureWhite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )

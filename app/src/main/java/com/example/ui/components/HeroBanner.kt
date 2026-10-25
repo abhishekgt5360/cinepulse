@@ -44,12 +44,12 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.data.model.MovieItem
-import com.example.ui.theme.BrandButtonGradient
-import com.example.ui.theme.JetBlack
-import com.example.ui.theme.LiquidGlassBackground
-import com.example.ui.theme.LiquidGlassBorderBrush
+
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.RatingGold
+
 import kotlinx.coroutines.delay
 
 /**
@@ -121,8 +121,8 @@ fun HeroBanner(
                             .width(dotWidth)
                             .clip(RoundedCornerShape(999.dp))
                             .background(
-                                if (isActive) Brush.horizontalGradient(BrandButtonGradient)
-                                else Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.35f)))
+                                if (isActive) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                             )
                     )
                 }
@@ -175,9 +175,9 @@ private fun HeroBannerSlide(
                         colorStops = arrayOf(
                             0.00f to Color.Transparent,
                             0.35f to Color.Transparent,
-                            0.62f to JetBlack.copy(alpha = 0.70f),
-                            0.82f to JetBlack.copy(alpha = 0.95f),
-                            1.00f to JetBlack
+                            0.62f to MaterialTheme.colorScheme.background.copy(alpha = 0.70f),
+                            0.82f to MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
+                            1.00f to MaterialTheme.colorScheme.background
                         )
                     )
                 )
@@ -217,15 +217,14 @@ private fun HeroBannerSlide(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(999.dp))
-                            .background(LiquidGlassBackground)
-                            .border(0.8.dp, LiquidGlassBorderBrush, RoundedCornerShape(999.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
                             .padding(horizontal = 8.dp, vertical = 3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector        = Icons.Default.Star,
                             contentDescription = null,
-                            tint               = RatingGold,
+                            tint               = MaterialTheme.colorScheme.tertiary,
                             modifier           = Modifier.size(11.dp)
                         )
                         Spacer(Modifier.width(3.dp))
@@ -256,17 +255,17 @@ private fun HeroBannerSlide(
                 verticalAlignment     = Alignment.CenterVertically
             ) {
                 LiquidGlassButton(
-                    text        = "Watch Now",
-                    onClick     = onWatchClick,
-                    leadingIcon = Icons.Default.PlayArrow,
-                    modifier    = Modifier.weight(1f).testTag("hero_watch_button")
+                    text    = "Watch Now",
+                    onClick = onWatchClick,
+                    icon    = Icons.Default.PlayArrow,
+                    modifier = Modifier.weight(1f).testTag("hero_watch_button")
                 )
 
                 LiquidGlassSecondaryButton(
-                    text        = "Details",
-                    onClick     = onItemClick,
-                    leadingIcon = Icons.Default.Info,
-                    modifier    = Modifier.weight(1f).testTag("hero_details_button")
+                    text    = "Details",
+                    onClick = onItemClick,
+                    icon    = Icons.Default.Info,
+                    modifier = Modifier.weight(1f).testTag("hero_details_button")
                 )
             }
         }

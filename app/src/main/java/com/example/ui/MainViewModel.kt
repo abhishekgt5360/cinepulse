@@ -26,6 +26,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+import com.example.ui.theme.ThemeMode
+
 private const val HTTP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 private const val REFERER_HEADER = "https://moviebox.ph/"
 
@@ -88,6 +90,22 @@ data class DetailPlayerUiState(
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
+    private val prefs = application.getSharedPreferences("cinepulse_prefs", Context.MODE_PRIVATE)
+
+    private val _themeMode = MutableStateFlow(
+        try {
+            ThemeMode.valueOf(prefs.getString("theme_mode", ThemeMode.CRIMSON.name) ?: ThemeMode.CRIMSON.name)
+        } catch (e: Exception) {
+            ThemeMode.CRIMSON
+        }
+    )
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    fun setThemeMode(mode: ThemeMode) {
+        prefs.edit().putString("theme_mode", mode.name).apply()
+        _themeMode.value = mode
+    }
+
     private val database = AppDatabase.getInstance(application)
     private val repository = MovieRepository(database = database, context = application)
 

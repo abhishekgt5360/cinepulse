@@ -58,8 +58,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
-                MainApp(isInPipMode = isInPipMode)
+            val viewModel = viewModel<MainViewModel>()
+            val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+            CinePulseTheme(mode = themeMode) {
+                MainApp(viewModel = viewModel, isInPipMode = isInPipMode)
             }
         }
     }
@@ -142,6 +144,7 @@ fun MainApp(
     var showDevCreditDialog by remember {
         mutableStateOf(!isInPipMode && DevCreditManager.shouldShowDialog(context))
     }
+    var showAppearanceScreen by remember { mutableStateOf(false) }
 
     if (showDevCreditDialog && !isInPipMode) {
         DevCreditDialog(
@@ -154,9 +157,11 @@ fun MainApp(
     }
 
     // Handle back button: In landscape, exit fullscreen back to portrait first
-    BackHandler(enabled = !isInPipMode && (isLandscape || isDetailOpen || currentTab != AppTab.HOME)) {
+    BackHandler(enabled = !isInPipMode && (isLandscape || isDetailOpen || showAppearanceScreen || currentTab != AppTab.HOME)) {
         if (isLandscape) {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } else if (showAppearanceScreen) {
+            showAppearanceScreen = false
         } else if (isDetailOpen) {
             viewModel.closeDetail()
         } else {
@@ -165,83 +170,60 @@ fun MainApp(
     }
 
     Scaffold(
-        containerColor = JetBlack,
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             if (!isInPipMode && !isDetailOpen && !isFullscreenPlaying) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets.navigationBars)
-                        .padding(horizontal = 24.dp, vertical = 10.dp),
-                    contentAlignment = Alignment.Center
+                NavigationBar(
+                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ) {
-                    // Authentic iOS Frosted Glass Floating Dock
-                    Surface(
-                        shape = RoundedCornerShape(32.dp),
-                        color = LiquidGlassNavBg,
-                        border = BorderStroke(1.dp, LiquidGlassBorderBrush),
-                        shadowElevation = 24.dp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(64.dp)
-                            .testTag("bottom_nav_bar")
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            LiquidGlassNavItem(
-                                selected = currentTab == AppTab.HOME,
-                                onClick = { viewModel.selectTab(AppTab.HOME) },
-                                icon = if (currentTab == AppTab.HOME) Icons.Filled.Home else Icons.Outlined.Home,
-                                label = "Home",
-                                testTag = "nav_home",
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            LiquidGlassNavItem(
-                                selected = currentTab == AppTab.CATALOG,
-                                onClick = { viewModel.selectTab(AppTab.CATALOG) },
-                                icon = if (currentTab == AppTab.CATALOG) Icons.Filled.Explore else Icons.Outlined.Explore,
-                                label = "Browse",
-                                testTag = "nav_browse",
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            LiquidGlassNavItem(
-                                selected = currentTab == AppTab.SEARCH,
-                                onClick = { viewModel.selectTab(AppTab.SEARCH) },
-                                icon = Icons.Filled.Search,
-                                label = "Search",
-                                testTag = "nav_search",
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            LiquidGlassNavItem(
-                                selected = currentTab == AppTab.LIBRARY,
-                                onClick = { viewModel.selectTab(AppTab.LIBRARY) },
-                                icon = if (currentTab == AppTab.LIBRARY) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                                label = "Library",
-                                testTag = "nav_library",
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
+                    NavigationBarItem(
+                        selected = currentTab == AppTab.HOME,
+                        onClick = { viewModel.selectTab(AppTab.HOME) },
+                        icon = { Icon(if (currentTab == AppTab.HOME) Icons.Filled.Home else Icons.Outlined.Home, contentDescription = "Home") },
+                        label = { Text("Home") },
+                        modifier = Modifier.testTag("nav_home")
+                    )
+                    NavigationBarItem(
+                        selected = currentTab == AppTab.CATALOG,
+                        onClick = { viewModel.selectTab(AppTab.CATALOG) },
+                        icon = { Icon(if (currentTab == AppTab.CATALOG) Icons.Filled.Explore else Icons.Outlined.Explore, contentDescription = "Browse") },
+                        label = { Text("Browse") },
+                        modifier = Modifier.testTag("nav_browse")
+                    )
+                    NavigationBarItem(
+                        selected = currentTab == AppTab.SEARCH,
+                        onClick = { viewModel.selectTab(AppTab.SEARCH) },
+                        icon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
+                        label = { Text("Search") },
+                        modifier = Modifier.testTag("nav_search")
+                    )
+                    NavigationBarItem(
+                        selected = currentTab == AppTab.LIBRARY,
+                        onClick = { viewModel.selectTab(AppTab.LIBRARY) },
+                        icon = { Icon(if (currentTab == AppTab.LIBRARY) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, contentDescription = "Library") },
+                        label = { Text("Library") },
+                        modifier = Modifier.testTag("nav_library")
+                    )
                 }
             }
         },
         // Edge-to-edge content: screens manage their own top status bar clearance to avoid top black voids
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { _ ->
+    ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(JetBlack)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(innerPadding)
         ) {
-            if (isDetailOpen) {
+            if (showAppearanceScreen) {
+                com.example.ui.screens.appearance.AppearanceScreen(
+                    currentThemeMode = viewModel.themeMode.collectAsStateWithLifecycle().value,
+                    onThemeSelected = { viewModel.setThemeMode(it) },
+                    onBackClick = { showAppearanceScreen = false }
+                )
+            } else if (isDetailOpen) {
                 DetailScreen(
                     uiState = detailState,
                     exoPlayer = exoPlayer,
@@ -346,7 +328,8 @@ fun MainApp(
                             },
                             onClearHistory = { viewModel.clearAllHistory() },
                             onExploreClick = { viewModel.selectTab(AppTab.HOME) },
-                            onOpenDevCredit = { showDevCreditDialog = true }
+                            onOpenDevCredit = { showDevCreditDialog = true },
+                            onAppearanceClick = { showAppearanceScreen = true }
                         )
                     }
                 }
@@ -364,60 +347,4 @@ private fun Context.findActivity(): Activity? {
     return null
 }
 
-@Composable
-private fun LiquidGlassNavItem(
-    selected: Boolean,
-    onClick: () -> Unit,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    testTag: String,
-    modifier: Modifier = Modifier
-) {
-    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
 
-    Column(
-        modifier = modifier
-            .fillMaxHeight()
-            .clip(RoundedCornerShape(18.dp))
-            .clickable {
-                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                onClick()
-            }
-            .padding(vertical = 4.dp)
-            .testTag(testTag),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .height(28.dp)
-                .width(46.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .then(
-                    if (selected) {
-                        Modifier.background(Brush.horizontalGradient(BrandButtonGradient))
-                    } else {
-                        Modifier
-                    }
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = if (selected) PureWhite else PureWhite.copy(alpha = 0.55f),
-                modifier = Modifier.size(19.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(2.dp))
-
-        Text(
-            text = label,
-            fontSize = 10.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            color = if (selected) PureWhite else PureWhite.copy(alpha = 0.55f),
-            letterSpacing = (-0.2).sp
-        )
-    }
-}

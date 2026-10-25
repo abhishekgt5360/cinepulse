@@ -1,97 +1,77 @@
 package com.example.ui.theme
 
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// ═════════════════════════════════════════════════════════════════════════════
-// 💎 STRICT 3-COLOR PALETTE (Exact Logo Red, Pitch Black & Pure White)
-// Inspired by Netflix & Apple TV — Zero grayish/muddy tones, Zero orange fade
-// ═════════════════════════════════════════════════════════════════════════════
+// CRIMSON SCHEME
+val CrimsonPrimary = Color(0xFFFFB2BC)
+val CrimsonOnPrimary = Color(0xFF670024)
+val CrimsonPrimaryContainer = Color(0xFF8F0036)
+val CrimsonOnPrimaryContainer = Color(0xFFFFD9DE)
 
-// 1. Exact CinePulse Logo Crimson Red (Electric, punchy, sampled directly from logo)
-val LogoRed                = Color(0xFFEE1E50)
-val LogoRedLight           = Color(0xFFFF2A55)
-val BrandCoral             = LogoRed
-val BrandOrange            = LogoRedLight
-val BrandBerry             = Color(0xFFC71542)
+val CrimsonSecondary = Color(0xFFE5BDC2)
+val CrimsonOnSecondary = Color(0xFF43292D)
+val CrimsonSecondaryContainer = Color(0xFF5B3F43)
+val CrimsonOnSecondaryContainer = Color(0xFFFFD9DE)
 
-// 2. True Pitch Black (Pure OLED Black #000000)
-val PitchBlack             = Color(0xFF000000)
-val JetBlack               = PitchBlack
-val CinemaBlack            = PitchBlack
-val CinemaDark             = PitchBlack
-val CinemaSurface          = Color(0xFF080808)   // Deep black surface
-val CinemaSurfaceVariant   = Color(0xFF111111)   // Elevated black surface
-val CinemaBorder           = Color(0x26FFFFFF)   // 15% pure white specular rim
+val CrimsonTertiary = Color(0xFFE9C16C)
+val CrimsonOnTertiary = Color(0xFF3F2E00)
+val CrimsonTertiaryContainer = Color(0xFF5B4300)
+val CrimsonOnTertiaryContainer = Color(0xFFFFDEA0)
 
-// 3. Crisp Pure White (#FFFFFF)
-val PureWhite              = Color(0xFFFFFFFF)
-val TextPrimary            = PureWhite
-val TextSecondary          = Color(0xB3FFFFFF)   // 70% white
-val TextMuted              = Color(0x66FFFFFF)   // 40% white
+val CrimsonBackground = Color(0xFF1A1112)
+val CrimsonOnBackground = Color(0xFFF0DEDF)
+val CrimsonSurface = Color(0xFF1A1112)
+val CrimsonOnSurface = Color(0xFFF0DEDF)
 
-// Unified Accents (Strictly Pure White or Logo Red — No cyan, gold or murky tones)
-val CinemaRed              = LogoRed
-val CinemaRedLight         = LogoRedLight
-val CinemaOrange           = LogoRedLight
-val CinemaAmber            = LogoRed
-val CinemaCyan             = PureWhite           // Subtitle/Audio icons are pure white
-val CinemaGreen            = LogoRed
-val RatingGold             = PureWhite           // Clean Apple TV style white star
+val CrimsonSurfaceVariant = Color(0xFF534345)
+val CrimsonOnSurfaceVariant = Color(0xFFD7C1C3)
+val CrimsonOutline = Color(0xFF9F8C8E)
+val CrimsonOutlineVariant = Color(0xFF534345)
 
-// ── Vibrant Logo Red Gradients ────────────────────────────────────────────────
-val BrandLogoGradient      = listOf(LogoRedLight, LogoRed)
-val BrandButtonGradient    = listOf(LogoRedLight, LogoRed)
-val CinemaRedGradient      = BrandButtonGradient
-val CinemaGradientBrush    = Brush.horizontalGradient(BrandButtonGradient)
-val BrandFullGradientBrush = Brush.horizontalGradient(BrandLogoGradient)
+val CrimsonSurfaceContainerLowest = Color(0xFF140C0D)
+val CrimsonSurfaceContainerLow = Color(0xFF22191A)
+val CrimsonSurfaceContainer = Color(0xFF261C1D)
+val CrimsonSurfaceContainerHigh = Color(0xFF312627)
+val CrimsonSurfaceContainerHighest = Color(0xFF3C3132)
 
-// ── Apple TV & Netflix Pure Glass Design System (liquid-glass-main) ───────────
-// Frosted glass over Pitch Black with crisp specular highlights (NO grayish tint)
-val LiquidGlassBackground        = Color(0x14FFFFFF)   // 8% white frosted glass
-val LiquidGlassSurface           = Color(0x1FFFFFFF)   // 12% white frosted glass
-val LiquidGlassSurfaceElevated   = Color(0x2EFFFFFF)   // 18% white frosted glass
-val LiquidGlassSurfaceHigh       = Color(0x3DFFFFFF)   // 24% white frosted glass
-val LiquidGlassBorder            = Color(0x26FFFFFF)   // 15% white rim
-val LiquidGlassSpecularHighlight = Color(0x80FFFFFF)   // 50% top white highlight
-val LiquidGlassSpecularBottom    = Color(0x14FFFFFF)   // 8% bottom bounce rim
-val LiquidGlassNavBg             = Color(0xF5000000)   // 96% Pitch Black dock
-val LiquidGlassPillActive        = LogoRed
-val LiquidGlassPillActiveBg      = Color(0x33EE1E50)
+val CrimsonError = Color(0xFFFFB4AB)
+val CrimsonOnError = Color(0xFF690005)
+val CrimsonErrorContainer = Color(0xFF93000A)
+val CrimsonOnErrorContainer = Color(0xFFFFDAD6)
 
-// Aliases
-val GlassBackground     = LiquidGlassBackground
-val GlassSurface        = LiquidGlassSurface
-val GlassBorder         = LiquidGlassBorder
-val GlassBorderSpecular = Color(0x40FFFFFF)
-val GlassActiveBorder   = LogoRed
+// OLED SCHEME
+val OledPrimary = Color(0xFFFF5A78)
+val OledOnPrimary = Color(0xFF000000)
+val OledPrimaryContainer = Color(0xFF5A0020)
+val OledOnPrimaryContainer = Color(0xFFFFD9DE)
 
-// Specular rim: 50% white top -> 15% lateral -> 8% bottom bounce
-val LiquidGlassBorderBrush = Brush.verticalGradient(
-    listOf(
-        LiquidGlassSpecularHighlight,
-        LiquidGlassBorder,
-        LiquidGlassSpecularBottom
-    )
-)
+val OledSecondary = Color(0xFFD8A9B0)
+val OledOnSecondary = Color(0xFF000000)
+val OledSecondaryContainer = Color(0xFF3A2226)
+val OledOnSecondaryContainer = Color(0xFFFFD9DE)
 
-val LiquidGlassActiveBorderBrush = Brush.horizontalGradient(
-    listOf(LogoRedLight, LogoRed)
-)
+val OledTertiary = Color(0xFFE9C16C)
+val OledOnTertiary = Color(0xFF000000)
+val OledTertiaryContainer = Color(0xFF3F2E00)
+val OledOnTertiaryContainer = Color(0xFFFFDEA0)
 
-// Ambient sheen: 24% specular glare top-left fading down
-val LiquidGlassSheenBrush = Brush.linearGradient(
-    colorStops = arrayOf(
-        0f    to Color(0x30FFFFFF),
-        0.35f to Color(0x0AFFFFFF),
-        0.75f to Color(0x00FFFFFF)
-    )
-)
+val OledBackground = Color(0xFF000000)
+val OledOnBackground = Color(0xFFF2F2F2)
+val OledSurface = Color(0xFF000000)
+val OledOnSurface = Color(0xFFF2F2F2)
 
-// Translucent pitch-black glass gradient
-val LiquidGlassSurfaceGradient = Brush.verticalGradient(
-    listOf(
-        Color(0x24FFFFFF),
-        Color(0x08FFFFFF)
-    )
-)
+val OledSurfaceVariant = Color(0xFF1E1E1E)
+val OledOnSurfaceVariant = Color(0xFFB8B8B8)
+val OledOutline = Color(0xFF777777)
+val OledOutlineVariant = Color(0xFF2E2E2E)
+
+val OledSurfaceContainerLowest = Color(0xFF000000)
+val OledSurfaceContainerLow = Color(0xFF0A0A0A)
+val OledSurfaceContainer = Color(0xFF121212)
+val OledSurfaceContainerHigh = Color(0xFF1E1E1E)
+val OledSurfaceContainerHighest = Color(0xFF2A2A2A)
+
+// Legacy aliases for the VideoPlayer (kept to avoid heavy modifications to player internals)
+val LogoRed = Color(0xFFEE1E50)
+val PureWhite = Color(0xFFFFFFFF)
+val PitchBlack = Color(0xFF000000)

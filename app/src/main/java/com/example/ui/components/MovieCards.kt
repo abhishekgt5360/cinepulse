@@ -49,16 +49,11 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.data.local.WatchHistoryEntity
 import com.example.data.model.MovieItem
-import com.example.ui.theme.BrandButtonGradient
-import com.example.ui.theme.BrandOrange
-import com.example.ui.theme.CinemaSurfaceVariant
-import com.example.ui.theme.JetBlack
-import com.example.ui.theme.LiquidGlassBorderBrush
-import com.example.ui.theme.LiquidGlassSurface
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import com.example.ui.theme.PureWhite
-import com.example.ui.theme.RatingGold
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  MoviePosterCard — Liquid glass poster card with authentic brand accents
@@ -83,8 +78,7 @@ fun MoviePosterCard(
                 .width(cardWidth)
                 .height(cardHeight)
                 .clip(shape)
-                .background(CinemaSurfaceVariant)
-                .border(0.8.dp, LiquidGlassBorderBrush, shape)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .clickable { onClick() }
         ) {
             // Poster image
@@ -106,7 +100,7 @@ fun MoviePosterCard(
                     .align(Alignment.BottomCenter)
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, JetBlack.copy(alpha = 0.90f))
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.90f))
                         )
                     )
             )
@@ -118,21 +112,20 @@ fun MoviePosterCard(
                         .padding(7.dp)
                         .align(Alignment.TopEnd)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(JetBlack.copy(alpha = 0.85f))
-                        .border(0.6.dp, LiquidGlassBorderBrush, RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f))
                         .padding(horizontal = 6.dp, vertical = 3.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = null,
-                        tint = RatingGold,
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(10.dp)
                     )
                     Spacer(Modifier.width(3.dp))
                     Text(
                         text = movie.rating ?: "",
-                        color = PureWhite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -147,12 +140,12 @@ fun MoviePosterCard(
                         .padding(7.dp)
                         .align(Alignment.TopStart)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(Brush.horizontalGradient(BrandButtonGradient))
+                        .background(MaterialTheme.colorScheme.primary)
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = badgeText,
-                        color = PureWhite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 8.5.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -178,12 +171,12 @@ fun MoviePosterCard(
         ) {
             Text(
                 text = movie.year ?: "",
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 11.sp
             )
             Text(
                 text = movie.genre?.split(",")?.firstOrNull()?.trim() ?: "",
-                color = BrandOrange,
+                color = MaterialTheme.colorScheme.primary,
                 fontSize = 11.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -217,8 +210,7 @@ fun ContinueWatchingCard(
             .width(210.dp)
             .scale(scale)
             .clip(shape)
-            .background(LiquidGlassSurface)
-            .border(0.8.dp, LiquidGlassBorderBrush, shape)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
             .clickable(interactionSource = interactionSource, indication = null) { onPlayClick() }
             .testTag("continue_card_${history.subjectId}")
     ) {
@@ -244,7 +236,7 @@ fun ContinueWatchingCard(
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            listOf(Color.Transparent, JetBlack.copy(alpha = 0.80f))
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.80f))
                         )
                     )
             )
@@ -255,7 +247,7 @@ fun ContinueWatchingCard(
                     .size(42.dp)
                     .align(Alignment.Center)
                     .clip(CircleShape)
-                    .background(Brush.horizontalGradient(BrandButtonGradient))
+                    .background(MaterialTheme.colorScheme.primary)
                     .clickable { onPlayClick() },
                 contentAlignment = Alignment.Center
             ) {
@@ -294,12 +286,11 @@ fun ContinueWatchingCard(
                         .align(Alignment.TopStart)
                         .clip(RoundedCornerShape(6.dp))
                         .background(Color(0xCC000000))
-                        .border(0.5.dp, LiquidGlassBorderBrush, RoundedCornerShape(6.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = "S${history.season}:E${history.episode}",
-                        color = PureWhite,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -322,7 +313,7 @@ fun ContinueWatchingCard(
                     modifier = Modifier
                         .fillMaxWidth(progress)
                         .height(3.dp)
-                        .background(Brush.horizontalGradient(BrandButtonGradient))
+                        .background(MaterialTheme.colorScheme.primary)
                 )
             }
         }
@@ -331,7 +322,7 @@ fun ContinueWatchingCard(
         Column(modifier = Modifier.padding(10.dp)) {
             Text(
                 text = history.title,
-                color = PureWhite,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -341,7 +332,7 @@ fun ContinueWatchingCard(
             val remainingMins = ((history.durationMs - history.positionMs) / 60000L).coerceAtLeast(0)
             Text(
                 text = if (remainingMins > 0) "${remainingMins}m remaining" else "Watched",
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 10.5.sp
             )
         }

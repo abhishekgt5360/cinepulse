@@ -72,9 +72,9 @@ private fun ShimmerCard(modifier: Modifier = Modifier) {
     )
     val shimmerBrush = Brush.linearGradient(
         colors = listOf(
-            LiquidGlassSurface,
-            LiquidGlassSurfaceElevated,
-            LiquidGlassSurface
+            MaterialTheme.colorScheme.surfaceContainer,
+            MaterialTheme.colorScheme.surfaceContainerHigh,
+            MaterialTheme.colorScheme.surfaceContainer
         ),
         start = Offset(shimmerX, 0f),
         end = Offset(shimmerX + 400f, 400f)
@@ -83,7 +83,6 @@ private fun ShimmerCard(modifier: Modifier = Modifier) {
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(shimmerBrush)
-            .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(16.dp))
     )
 }
 
@@ -122,7 +121,7 @@ fun SearchScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
 
         // ── Liquid Glass Search Bar ───────────────────────────────────────────
@@ -132,8 +131,7 @@ fun SearchScreen(
                 .statusBarsPadding()
                 .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 10.dp)
                 .clip(RoundedCornerShape(999.dp))
-                .background(LiquidGlassSurface)
-                .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(999.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainer)
         ) {
             // Top specular sheen stripe
             Box(
@@ -144,7 +142,7 @@ fun SearchScreen(
                         Brush.horizontalGradient(
                             listOf(
                                 Color.Transparent,
-                                LiquidGlassSpecularHighlight,
+                                MaterialTheme.colorScheme.onSurface,
                                 Color.Transparent
                             )
                         )
@@ -156,7 +154,7 @@ fun SearchScreen(
                 placeholder = {
                     Text(
                         text = "Search movies, series, anime…",
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 },
@@ -164,7 +162,7 @@ fun SearchScreen(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = BrandCoral
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 },
                 trailingIcon = {
@@ -173,7 +171,7 @@ fun SearchScreen(
                             Icon(
                                 imageVector = Icons.Default.Clear,
                                 contentDescription = "Clear",
-                                tint = TextSecondary
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -190,9 +188,9 @@ fun SearchScreen(
                     disabledContainerColor = Color.Transparent,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    cursorColor = BrandCoral
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -211,8 +209,7 @@ fun SearchScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(LiquidGlassSurfaceElevated)
-                    .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                     .padding(vertical = 6.dp)
             ) {
                 Row(
@@ -226,8 +223,7 @@ fun SearchScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(999.dp))
-                                .background(LiquidGlassSurface)
-                                .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(999.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainer)
                                 .clickable {
                                     keyboardController?.hide()
                                     onSearchSubmit(suggestion)
@@ -239,7 +235,7 @@ fun SearchScreen(
                                 text = suggestion,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Medium,
-                                    color = TextPrimary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 12.sp
                                 )
                             )
@@ -317,8 +313,7 @@ fun SearchScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(24.dp))
-                                .background(LiquidGlassSurface)
-                                .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(24.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainer)
                                 .padding(32.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -327,14 +322,13 @@ fun SearchScreen(
                                     modifier = Modifier
                                         .size(64.dp)
                                         .clip(RoundedCornerShape(20.dp))
-                                        .background(LiquidGlassSurfaceElevated)
-                                        .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(20.dp)),
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Search,
                                         contentDescription = null,
-                                        tint = TextSecondary,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(30.dp)
                                     )
                                 }
@@ -343,7 +337,7 @@ fun SearchScreen(
                                     text = "No results for\n\"${uiState.query}\"",
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = TextPrimary,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         textAlign = TextAlign.Center
                                     )
                                 )
@@ -351,7 +345,7 @@ fun SearchScreen(
                                 Text(
                                     text = "Try different keywords or title names.",
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = TextSecondary,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         textAlign = TextAlign.Center
                                     )
                                 )
@@ -381,7 +375,7 @@ fun SearchScreen(
                                 text = "Trending Searches",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = TextPrimary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 16.sp
                                 )
                             )
@@ -395,8 +389,7 @@ fun SearchScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(14.dp))
-                                        .background(LiquidGlassSurface)
-                                        .border(1.dp, LiquidGlassBorderBrush, RoundedCornerShape(14.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceContainer)
                                         .clickable {
                                             keyboardController?.hide()
                                             onSearchSubmit(tag)
@@ -416,7 +409,7 @@ fun SearchScreen(
                                         Text(
                                             text = tag,
                                             style = MaterialTheme.typography.bodyMedium.copy(
-                                                color = TextPrimary,
+                                                color = MaterialTheme.colorScheme.onSurface,
                                                 fontWeight = FontWeight.Medium
                                             ),
                                             modifier = Modifier.weight(1f)

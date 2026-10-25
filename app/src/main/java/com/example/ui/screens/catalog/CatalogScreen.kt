@@ -26,7 +26,7 @@ import com.example.data.model.MovieItem
 import com.example.ui.CatalogType
 import com.example.ui.CatalogUiState
 import com.example.ui.components.MoviePosterCard
-import com.example.ui.theme.*
+
 
 private val GENRES = listOf(
     "All", "Action", "Drama", "Comedy", "Sci-Fi", "Horror",
@@ -70,7 +70,7 @@ fun CatalogScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(CinemaBlack)
+            .background(MaterialTheme.colorScheme.background)
     ) {
 
         // ── Floating glass page header ─────────────────────────────────────────
@@ -82,8 +82,8 @@ fun CatalogScreen(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            CinemaBlack,
-                            CinemaBlack.copy(alpha = 0.92f)
+                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.background.copy(alpha = 0.92f)
                         )
                     )
                 )
@@ -94,7 +94,7 @@ fun CatalogScreen(
                     text = "Explore & Browse",
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.ExtraBold,
-                        color = TextPrimary
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 )
 
@@ -105,12 +105,7 @@ fun CatalogScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(LiquidGlassBackground)
-                        .border(
-                            width = 1.dp,
-                            brush = LiquidGlassBorderBrush,
-                            shape = RoundedCornerShape(14.dp)
-                        )
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
                         .padding(3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -121,8 +116,8 @@ fun CatalogScreen(
                                 .weight(1f)
                                 .clip(RoundedCornerShape(11.dp))
                                 .background(
-                                    if (isSelected) Brush.horizontalGradient(BrandButtonGradient)
-                                    else Brush.horizontalGradient(listOf(Color.Transparent, Color.Transparent))
+                                    if (isSelected) MaterialTheme.colorScheme.primary
+                                    else Color.Transparent
                                 )
                                 .clickable { onTypeSelected(catalogType) }
                                 .padding(vertical = 9.dp),
@@ -132,7 +127,7 @@ fun CatalogScreen(
                                 text = catalogType.label,
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) PureWhite else TextSecondary,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontSize = 13.sp
                                 )
                             )
@@ -192,7 +187,7 @@ fun CatalogScreen(
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
-                    color = CinemaRed,
+                    color = MaterialTheme.colorScheme.primary,
                     strokeWidth = 2.5.dp,
                     modifier = Modifier.size(40.dp)
                 )
@@ -208,12 +203,7 @@ fun CatalogScreen(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(LiquidGlassSurface)
-                        .border(
-                            width = 1.dp,
-                            brush = LiquidGlassBorderBrush,
-                            shape = RoundedCornerShape(20.dp)
-                        )
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
                         .padding(28.dp)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -221,14 +211,14 @@ fun CatalogScreen(
                             text = "Unable to Load",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = MaterialTheme.colorScheme.onBackground
                             )
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = uiState.errorMessage,
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = TextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             ),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
@@ -280,7 +270,7 @@ fun CatalogScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(
-                                color = CinemaRed,
+                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(28.dp),
                                 strokeWidth = 2.dp
                             )
@@ -307,13 +297,8 @@ private fun GlassChip(
         modifier = Modifier
             .clip(shape)
             .then(
-                if (selected) Modifier.background(Brush.horizontalGradient(BrandButtonGradient))
-                else Modifier.background(LiquidGlassSurface)
-            )
-            .border(
-                width = 1.dp,
-                brush = if (selected) LiquidGlassActiveBorderBrush else LiquidGlassBorderBrush,
-                shape = shape
+                if (selected) Modifier.background(MaterialTheme.colorScheme.primary)
+                else Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 7.dp),
@@ -323,7 +308,7 @@ private fun GlassChip(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                color = PureWhite,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 12.sp
             )
         )

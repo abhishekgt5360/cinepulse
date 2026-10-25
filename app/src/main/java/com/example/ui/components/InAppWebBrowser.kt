@@ -75,12 +75,7 @@ fun InAppWebBrowserDialog(
                 .fillMaxSize()
                 .padding(top = 28.dp)
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                .background(CinemaDark)
-                .border(
-                    1.dp,
-                    LiquidGlassBorderBrush,
-                    RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-                )
+                .background(MaterialTheme.colorScheme.background)
                 .testTag("in_app_web_browser")
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -88,7 +83,7 @@ fun InAppWebBrowserDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(LiquidGlassSurface)
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
                         .padding(horizontal = 10.dp, vertical = 8.dp)
                 ) {
                     Row(
@@ -104,7 +99,7 @@ fun InAppWebBrowserDialog(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close Browser",
-                                tint = TextPrimary,
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -116,7 +111,7 @@ fun InAppWebBrowserDialog(
                                 Icon(
                                     imageVector = Icons.Default.Lock,
                                     contentDescription = "Secure Connection",
-                                    tint = CinemaCyan,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -124,7 +119,7 @@ fun InAppWebBrowserDialog(
                                     text = com.example.util.SecureVault.devDomain,
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = TextPrimary
+                                        color = MaterialTheme.colorScheme.onSurface
                                     ),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -134,7 +129,7 @@ fun InAppWebBrowserDialog(
                                 text = if (isLoading) "Loading website..." else pageTitle,
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     fontSize = 11.sp,
-                                    color = TextSecondary
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -150,7 +145,7 @@ fun InAppWebBrowserDialog(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Web Back",
-                                tint = if (canGoBack) TextPrimary else TextSecondary.copy(alpha = 0.3f),
+                                tint = if (canGoBack) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -164,7 +159,7 @@ fun InAppWebBrowserDialog(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = "Web Forward",
-                                tint = if (canGoForward) TextPrimary else TextSecondary.copy(alpha = 0.3f),
+                                tint = if (canGoForward) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -177,7 +172,7 @@ fun InAppWebBrowserDialog(
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Reload Page",
-                                tint = TextPrimary,
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
