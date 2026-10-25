@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.LocalHighContrast
+import com.example.ui.theme.selectableColors
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LiquidGlassCard -> Material 3 Card
@@ -227,11 +228,8 @@ fun GlassChip(
     icon: ImageVector? = null
 ) {
     val isHighContrast = LocalHighContrast.current
-    val border = if (isHighContrast) {
-        BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)
-    } else {
-        BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
-    }
+    val selColors = selectableColors(selected)
+    val borderWidth = if (isHighContrast) 1.5.dp else if (selected) 1.dp else 0.5.dp
 
     FilterChip(
         selected = selected,
@@ -259,14 +257,14 @@ fun GlassChip(
                 )
             }
         },
-        border = border,
+        border = BorderStroke(borderWidth, selColors.border),
         colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+            selectedContainerColor = selColors.container,
+            selectedLabelColor = selColors.content,
+            selectedLeadingIconColor = selColors.content,
+            containerColor = selColors.container,
+            labelColor = selColors.secondaryContent,
+            iconColor = selColors.secondaryContent
         ),
         modifier = modifier
     )

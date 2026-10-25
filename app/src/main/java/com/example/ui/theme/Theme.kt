@@ -19,6 +19,33 @@ enum class ThemeMode { CRIMSON, OLED, DYNAMIC, HIGH_CONTRAST, PAPER }
 
 val LocalHighContrast = staticCompositionLocalOf { false }
 
+data class SelectableColors(
+    val container: Color,
+    val content: Color,
+    val secondaryContent: Color,
+    val border: Color,
+    val accent: Color
+)
+
+@Composable
+fun selectableColors(selected: Boolean): SelectableColors {
+    val c = MaterialTheme.colorScheme
+    val isHighContrast = LocalHighContrast.current
+    return if (selected) SelectableColors(
+        container = c.primaryContainer,
+        content = c.onPrimaryContainer,
+        secondaryContent = c.onPrimaryContainer,
+        border = if (isHighContrast) c.outline else c.onPrimaryContainer,
+        accent = c.onPrimaryContainer
+    ) else SelectableColors(
+        container = c.surfaceContainer,
+        content = c.onSurface,
+        secondaryContent = c.onSurfaceVariant,
+        border = if (isHighContrast) c.outline else c.outlineVariant,
+        accent = c.primary
+    )
+}
+
 val CrimsonScheme = darkColorScheme(
     primary = CrimsonPrimary,
     onPrimary = CrimsonOnPrimary,

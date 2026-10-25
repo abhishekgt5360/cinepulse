@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import com.example.ui.theme.LocalHighContrast
+import com.example.ui.theme.selectableColors
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Delete
@@ -85,15 +86,11 @@ private fun GlassTabRow(
                     LibraryTab.HISTORY   -> "History ($historyCount)"
                 }
                 val shape = RoundedCornerShape(13.dp)
-                val containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
-                val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                val border = if (isHighContrast) {
-                    BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)
-                } else if (isSelected) {
-                    BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
-                } else {
-                    null
-                }
+                val selColors = selectableColors(isSelected)
+                val containerColor = if (isSelected) selColors.container else Color.Transparent
+                val contentColor = selColors.content
+                val borderWidth = if (isHighContrast) 1.5.dp else if (isSelected) 0.5.dp else 0.dp
+                val border = if (borderWidth > 0.dp) BorderStroke(borderWidth, selColors.border) else null
 
                 Box(
                     modifier = Modifier

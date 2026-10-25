@@ -282,7 +282,7 @@ fun ContinueWatchingCard(
                     .fillMaxWidth()
                     .height(3.dp)
                     .align(Alignment.BottomCenter)
-                    .background(Color(0x40FFFFFF))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
             ) {
                 Box(
                     modifier = Modifier

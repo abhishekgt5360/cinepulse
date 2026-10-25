@@ -42,6 +42,8 @@ import coil.request.ImageRequest
 import com.example.data.model.StreamSource
 import com.example.ui.DetailPlayerUiState
 import com.example.ui.components.*
+import com.example.ui.theme.LocalHighContrast
+import com.example.ui.theme.selectableColors
 import com.example.ui.player.VideoPlayer
 import com.example.ui.theme.*
 import com.example.util.DownloadHelper
@@ -628,19 +630,18 @@ fun DetailScreen(
                             key = { ep -> "ep_${currentSeason?.se ?: 1}_$ep" }
                         ) { epNum ->
                             val isCurrentEp = uiState.selectedEpisode == epNum && uiState.selectedSeason == currentSeason?.se
+                            val isHighContrast = LocalHighContrast.current
+                            val selColors = selectableColors(isCurrentEp)
+                            val borderWidth = if (isHighContrast) 1.5.dp else if (isCurrentEp) 1.dp else 0.5.dp
+                            val shape = RoundedCornerShape(14.dp)
+
                             Box(
                                  modifier = Modifier
                                      .fillMaxWidth()
                                      .padding(vertical = 4.dp)
-                                     .clip(RoundedCornerShape(14.dp))
-                                     .background(
-                                         if (isCurrentEp) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
-                                     )
-                                     .border(
-                                         if (isCurrentEp) 1.dp else 0.7.dp,
-                                         if (isCurrentEp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                         RoundedCornerShape(14.dp)
-                                     )
+                                     .clip(shape)
+                                     .background(selColors.container)
+                                     .border(borderWidth, selColors.border, shape)
                                      .clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) {
                                          currentSeason?.let { onSelectEpisode(it.se, epNum) }
                                      }
@@ -656,32 +657,34 @@ fun DetailScreen(
                                              modifier = Modifier
                                                  .size(34.dp)
                                                  .clip(CircleShape)
-                                                 .then(
-                                                     if (isCurrentEp) Modifier.background(MaterialTheme.colorScheme.primary)
-                                                     else Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
-                                                 ),
+                                                 .background(if (isCurrentEp) selColors.accent else MaterialTheme.colorScheme.surfaceContainerHigh),
                                              contentAlignment = Alignment.Center
                                          ) {
-                                             Icon(Icons.Default.PlayArrow, null, tint = if (isCurrentEp) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
+                                             Icon(
+                                                 imageVector = if (isCurrentEp && uiState.isPlaying) Icons.Default.GraphicEq else Icons.Default.PlayArrow,
+                                                 contentDescription = if (isCurrentEp && uiState.isPlaying) "Playing" else "Play",
+                                                 tint = if (isCurrentEp) MaterialTheme.colorScheme.onPrimaryContainer else selColors.content,
+                                                 modifier = Modifier.size(18.dp)
+                                             )
                                          }
                                          Spacer(Modifier.width(12.dp))
                                          Column {
                                              Text(
                                                  text = "Episode $epNum",
-                                                 color = MaterialTheme.colorScheme.onSurface,
+                                                 color = selColors.content,
                                                  fontSize = 14.sp,
                                                  fontWeight = FontWeight.Bold
                                              )
                                              Text(
                                                  text = "Season ${currentSeason?.se ?: 1}",
-                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                 color = selColors.secondaryContent,
                                                  fontSize = 11.sp
                                              )
                                          }
                                      }
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         if (isCurrentEp && uiState.isPlaying) {
-                                            Text("▶ Playing", color = LogoRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            Text("▶ Playing", color = selColors.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                             Spacer(Modifier.width(8.dp))
                                         }
                                         GlassIconButton(
@@ -689,7 +692,7 @@ fun DetailScreen(
                                             contentDescription = "Download",
                                             onClick = { currentSeason?.let { triggerDownload(it.se, epNum) } },
                                             modifier = Modifier.size(32.dp),
-                                            tint = MaterialTheme.colorScheme.onSurface
+                                            tint = selColors.content
                                         )
                                     }
                                 }
