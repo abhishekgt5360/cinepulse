@@ -369,7 +369,6 @@ fun LibraryScreen(
     onClearHistory: () -> Unit,
     onExploreClick: () -> Unit,
     onOpenDevCredit: () -> Unit = {},
-    onAppearanceClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableStateOf(LibraryTab.WATCHLIST) }
@@ -399,25 +398,6 @@ fun LibraryScreen(
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Appearance Settings
-                IconButton(
-                    onClick = onAppearanceClick,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .testTag("library_appearance_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Appearance",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
                 // Dev credit — small glass icon button
                 Box(
                     modifier = Modifier

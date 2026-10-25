@@ -360,8 +360,7 @@ fun MainApp(
                             },
                             onClearHistory = { viewModel.clearAllHistory() },
                             onExploreClick = { viewModel.selectTab(AppTab.HOME) },
-                            onOpenDevCredit = { showDevCreditDialog = true },
-                            onAppearanceClick = { showAppearanceScreen = true }
+                            onOpenDevCredit = { showDevCreditDialog = true }
                         )
                     }
                 }

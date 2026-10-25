@@ -1,5 +1,6 @@
 package com.example.ui.screens.catalog
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +12,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,7 +28,10 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.MovieItem
 import com.example.ui.CatalogType
 import com.example.ui.CatalogUiState
+import com.example.ui.components.GlassChip
 import com.example.ui.components.MoviePosterCard
+import com.example.ui.theme.LocalHighContrast
+import com.example.ui.theme.selectableColors
 
 
 private val GENRES = listOf(
@@ -100,37 +106,62 @@ fun CatalogScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // ── iOS Frosted Glass Segmented Switcher: Movies | TV Series | Animation ──
+                // ── Segmented Switcher: Movies | TV Series | Animation ──
+                val isHighContrast = LocalHighContrast.current
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .border(
+                            width = if (isHighContrast) 1.5.dp else 0.5.dp,
+                            color = if (isHighContrast) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(14.dp)
+                        )
                         .padding(3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    CatalogType.values().forEach { catalogType ->
+                    CatalogType.entries.forEach { catalogType ->
                         val isSelected = uiState.type == catalogType
+                        val selColors = selectableColors(isSelected)
+                        val shape = RoundedCornerShape(11.dp)
+                        val containerColor = if (isSelected) selColors.container else Color.Transparent
+                        val contentColor = selColors.content
+                        val borderWidth = if (isHighContrast) 1.5.dp else if (isSelected) 0.5.dp else 0.dp
+                        val border = if (borderWidth > 0.dp) BorderStroke(borderWidth, selColors.border) else null
+
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(11.dp))
-                                .background(
-                                    if (isSelected) MaterialTheme.colorScheme.primary
-                                    else Color.Transparent
-                                )
+                                .clip(shape)
+                                .background(containerColor)
+                                .then(if (border != null) Modifier.border(border, shape) else Modifier)
                                 .clickable { onTypeSelected(catalogType) }
                                 .padding(vertical = 9.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = catalogType.label,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 13.sp
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                if (isSelected && isHighContrast) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = contentColor,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                }
+                                Text(
+                                    text = catalogType.label,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = contentColor,
+                                        fontSize = 12.5.sp
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                 }
@@ -279,38 +310,5 @@ fun CatalogScreen(
                 }
             }
         }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GlassChip — liquid glass filter chip with CinemaRed tint when selected
-// ─────────────────────────────────────────────────────────────────────────────
-@Composable
-private fun GlassChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val shape = RoundedCornerShape(20.dp)
-
-    Box(
-        modifier = Modifier
-            .clip(shape)
-            .then(
-                if (selected) Modifier.background(MaterialTheme.colorScheme.primary)
-                else Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 7.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 12.sp
-            )
-        )
     }
 }
