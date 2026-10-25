@@ -201,7 +201,7 @@ fun DevCreditDialog(
 
                 // Continue / Dismiss button
                 LiquidGlassSecondaryButton(
-                    text = if (snoozeChecked) "Snooze & Continue" else "Continue to CinePulse",
+                    text = if (snoozeChecked) "Snooze & Continue" else "Continue to Zippy",
                     onClick = {
                         if (snoozeChecked) onSnooze7Days() else onDismiss()
                     },

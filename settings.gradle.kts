@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "CinePulse"
+rootProject.name = "Zippy"
 
 include(":app")

@@ -13,7 +13,7 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.devzar.cinepulse"
+    applicationId = "com.toolsetstudio.zippy"
     minSdk = 24
     targetSdk = 36
     versionCode = 1
@@ -58,6 +58,16 @@ android {
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true
+  }
+}
+
+androidComponents {
+  onVariants { variant ->
+    if (variant.name == "release") {
+      variant.outputs.forEach { output ->
+        (output as? com.android.build.api.variant.impl.VariantOutputImpl)?.outputFileName?.set("Zippy-1.0.apk")
+      }
+    }
   }
 }
 

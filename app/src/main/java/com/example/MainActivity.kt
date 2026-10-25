@@ -282,6 +282,9 @@ fun MainApp(
                     onProgressUpdate = { pos, dur ->
                         viewModel.saveProgress(pos, dur)
                     },
+                    onStartOver = { subId, se, ep, isSeries ->
+                        viewModel.resetEpisodeProgress(subId, se, ep, isSeries)
+                    },
                     onFetchStreamForDownload = { se, ep ->
                         val slug = detailState.slug
                         val id = detailState.subjectId
@@ -299,11 +302,11 @@ fun MainApp(
                             uiState = homeState,
                             watchHistory = watchHistory,
                             onMovieClick = { movie ->
-                                viewModel.openDetail(movie.safeSlug, movie.subjectId, movie.safeName, movie.type)
+                                viewModel.openDetail(movie.safeSlug, movie.subjectId, movie.safeName, movie.type, movie.posterUrl)
                             },
                             onWatchHeroClick = { movie ->
                                 val isSeries = movie.isTvSeries
-                                viewModel.openDetail(movie.safeSlug, movie.subjectId, movie.safeName, movie.type)
+                                viewModel.openDetail(movie.safeSlug, movie.subjectId, movie.safeName, movie.type, movie.posterUrl)
                                 viewModel.playItem(
                                     slug = movie.safeSlug,
                                     subjectId = movie.subjectId,
@@ -312,7 +315,7 @@ fun MainApp(
                                 )
                             },
                             onResumeHistoryClick = { history ->
-                                viewModel.openDetail(history.slug, history.subjectId, history.title, history.type)
+                                viewModel.openDetail(history.slug, history.subjectId, history.title, history.type, history.posterUrl)
                                 viewModel.playItem(history.slug, history.subjectId, history.season, history.episode, history.positionMs)
                             },
                             onDeleteHistoryClick = { subId ->
@@ -337,7 +340,7 @@ fun MainApp(
                             onGenreSelected = { genre -> viewModel.setCatalogGenre(genre) },
                             onSortSelected = { sort -> viewModel.setCatalogSort(sort) },
                             onMovieClick = { movie ->
-                                viewModel.openDetail(movie.safeSlug, movie.subjectId, movie.safeName, movie.type)
+                                viewModel.openDetail(movie.safeSlug, movie.subjectId, movie.safeName, movie.type, movie.posterUrl)
                             },
                             onLoadMore = { viewModel.loadCatalog(reset = false) },
                             onResetFilters = { viewModel.resetCatalogFilters() },
@@ -352,7 +355,7 @@ fun MainApp(
                             onQueryChanged = { q -> viewModel.onSearchQueryChanged(q) },
                             onSearchSubmit = { q -> viewModel.performSearch(q) },
                             onMovieClick = { movie ->
-                                viewModel.openDetail(movie.safeSlug, movie.subjectId, movie.safeName, movie.type)
+                                viewModel.openDetail(movie.safeSlug, movie.subjectId, movie.safeName, movie.type, movie.posterUrl)
                             }
                         )
                     }
@@ -362,10 +365,10 @@ fun MainApp(
                             watchlist = watchlist,
                             watchHistory = watchHistory,
                             onMovieClick = { movie ->
-                                viewModel.openDetail(movie.safeSlug, movie.subjectId, movie.safeName, movie.type)
+                                viewModel.openDetail(movie.safeSlug, movie.subjectId, movie.safeName, movie.type, movie.posterUrl)
                             },
                             onResumeHistoryClick = { history ->
-                                viewModel.openDetail(history.slug, history.subjectId, history.title, history.type)
+                                viewModel.openDetail(history.slug, history.subjectId, history.title, history.type, history.posterUrl)
                                 viewModel.playItem(history.slug, history.subjectId, history.season, history.episode, history.positionMs)
                             },
                             onDeleteHistoryItem = { subId ->

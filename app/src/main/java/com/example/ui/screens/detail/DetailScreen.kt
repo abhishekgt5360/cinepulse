@@ -59,6 +59,7 @@ fun DetailScreen(
     onSelectEpisode: (season: Int, episode: Int) -> Unit,
     onToggleWatchlist: () -> Unit,
     onProgressUpdate: (pos: Long, dur: Long) -> Unit,
+    onStartOver: (subjectId: String, season: Int, episode: Int, isSeries: Boolean) -> Unit = { _, _, _, _ -> },
     onFetchStreamForDownload: suspend (season: Int, episode: Int) -> List<StreamSource>,
     onRefreshStream: (resumePos: Long) -> Unit = {},
     modifier: Modifier = Modifier
@@ -82,7 +83,7 @@ fun DetailScreen(
             subtitleInfo = null,
             sources = uiState.streamResponse?.sources.orEmpty(),
             captions = uiState.captions,
-            initialPositionMs = uiState.initialSeekPositionMs,
+            session = uiState.session,
             isSeries = uiState.isSeries,
             onProgressUpdate = onProgressUpdate,
             onBackClick = onBackClick,
@@ -218,9 +219,10 @@ fun DetailScreen(
                                 subtitleInfo = subtitleText,
                                 sources = uiState.streamResponse?.sources.orEmpty(),
                                 captions = uiState.captions,
-                                initialPositionMs = uiState.initialSeekPositionMs,
+                                session = uiState.session,
                                 isSeries = uiState.isSeries,
                                 onProgressUpdate = onProgressUpdate,
+                                onStartOver = onStartOver,
                                 onBackClick = onBackClick,
                                 onRefreshStream = onRefreshStream,
                                 hasPreviousEpisode = uiState.isSeries && uiState.selectedEpisode > 1,
@@ -405,11 +407,12 @@ fun DetailScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
+                            val startMs = uiState.session?.startPositionMs ?: 0L
                             LiquidGlassButton(
                                 text = run {
                                     when {
-                                        uiState.initialSeekPositionMs > 60000L -> {
-                                            val mins = (uiState.initialSeekPositionMs / 1000) / 60
+                                        startMs > 60000L -> {
+                                            val mins = (startMs / 1000) / 60
                                             "Resume (${mins}m)"
                                         }
                                         uiState.isSeries -> "Play S${uiState.selectedSeason}:E${uiState.selectedEpisode}"

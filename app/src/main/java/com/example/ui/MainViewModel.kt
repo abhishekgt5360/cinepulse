@@ -21,12 +21,14 @@ import com.example.data.local.WatchHistoryEntity
 import com.example.data.local.WatchlistEntity
 import com.example.data.model.*
 import com.example.data.repository.MovieRepository
+import com.example.util.PlaybackSession
+import com.example.util.RegionalCategoryConfig
+import com.example.util.ResumeManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import com.example.util.RegionalCategoryConfig
 
 import com.example.ui.theme.ThemeMode
 
@@ -77,6 +79,7 @@ data class DetailPlayerUiState(
     val slug: String? = null,
     val subjectId: String? = null,
     val title: String = "",
+    val posterUrl: String? = null,
     val detail: DetailResponse? = null,
     val isSeries: Boolean = false,
     val isLoadingDetail: Boolean = false,
@@ -88,7 +91,7 @@ data class DetailPlayerUiState(
     val captions: List<CaptionItem> = emptyList(),
     val isLoadingStream: Boolean = false,
     val streamError: String? = null,
-    val initialSeekPositionMs: Long = 0L,
+    val session: PlaybackSession? = null,
     val isWatchlisted: Boolean = false
 )
 
@@ -496,12 +499,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun openDetail(slug: String, subjectId: String, title: String = "", initialType: String? = null) {
+    fun openDetail(
+        slug: String,
+        subjectId: String,
+        title: String = "",
+        initialType: String? = null,
+        posterUrl: String? = null
+    ) {
         val guessedSeries = initialType.equals("tv", ignoreCase = true) || initialType.equals("tv-series", ignoreCase = true)
         _detailPlayerState.value = DetailPlayerUiState(
             slug = slug,
             subjectId = subjectId,
             title = title,
+            posterUrl = posterUrl,
             isSeries = guessedSeries,
             selectedSeason = if (guessedSeries) 1 else 0,
             selectedEpisode = if (guessedSeries) 1 else 0,
@@ -538,16 +548,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     } else 0
                     val actualEp = if (isSeries) prevEp.coerceAtLeast(1) else 0
 
+                    val fetchedCover = detailRes.data?.subject?.cover?.url
+                    val effectivePoster = posterUrl?.takeIf { it.isNotBlank() } ?: fetchedCover
+                    if (!effectivePoster.isNullOrBlank()) {
+                        viewModelScope.launch {
+                            repository.updateWatchlistPosterIfMissing(subjectId, effectivePoster)
+                            repository.updateHistoryPosterIfMissing(subjectId, effectivePoster)
+                        }
+                    }
+
+                    val startPos = repository.getEpisodeProgress(subjectId, actualSe, actualEp, isSeries)
+                    val session = PlaybackSession(
+                        subjectId = subjectId,
+                        season = actualSe,
+                        episode = actualEp,
+                        startPositionMs = startPos,
+                        isSeries = isSeries
+                    )
+
                     _detailPlayerState.update {
                         it.copy(
                             detail = detailRes,
                             title = actualTitle,
+                            posterUrl = effectivePoster,
                             isSeries = isSeries,
                             availableSeasons = validSeasons,
                             selectedSeason = actualSe,
                             selectedEpisode = actualEp,
                             isLoadingDetail = false,
-                            initialSeekPositionMs = prevPos
+                            session = session
                         )
                     }
 
@@ -582,11 +611,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val current = _detailPlayerState.value
             val isSeries = current.isSeries
 
-            // For movies, Zar MovieBox API explicitly requires se=0, ep=0!
+            // Flush old session position under its own key before starting new session!
+            val oldSession = current.session
+            val player = playerInstance
+            if (oldSession != null && player != null && player.duration > 0 && player.currentPosition > 0) {
+                repository.saveWatchProgress(
+                    subjectId = oldSession.subjectId,
+                    slug = current.slug ?: slug,
+                    title = current.title,
+                    posterUrl = current.posterUrl,
+                    season = oldSession.season,
+                    episode = oldSession.episode,
+                    positionMs = player.currentPosition,
+                    durationMs = player.duration,
+                    type = if (oldSession.isSeries) "tv" else "movie"
+                )
+            }
+
+            // Stop player & clear media items to isolate sessions
+            playerInstance?.stop()
+            playerInstance?.clearMediaItems()
+
             val actualSe = if (isSeries) season.coerceAtLeast(1) else 0
             val actualEp = if (isSeries) episode.coerceAtLeast(1) else 0
 
-            val initialPos = resumePositionMs ?: repository.getHistoryItem(subjectId)?.positionMs ?: 0L
+            val initialPos = resumePositionMs ?: repository.getEpisodeProgress(subjectId, actualSe, actualEp, isSeries)
+            val newSession = PlaybackSession(
+                subjectId = subjectId,
+                season = actualSe,
+                episode = actualEp,
+                startPositionMs = initialPos,
+                isSeries = isSeries
+            )
 
             _detailPlayerState.update {
                 it.copy(
@@ -597,7 +653,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     isPlaying = true,
                     isLoadingStream = true,
                     streamError = null,
-                    initialSeekPositionMs = initialPos
+                    session = newSession
                 )
             }
 
@@ -651,13 +707,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playItem(slug, subjectId, season, episode, resumePositionMs = 0L)
     }
 
+    fun resetEpisodeProgress(subjectId: String, season: Int, episode: Int, isSeries: Boolean) {
+        viewModelScope.launch {
+            repository.resetEpisodeProgress(subjectId, season, episode, isSeries)
+        }
+    }
+
     fun saveProgress(posMs: Long, durMs: Long) {
         val s = _detailPlayerState.value
-        val subId = s.subjectId ?: return
+        val subId = s.session?.subjectId ?: s.subjectId ?: return
         val slug = s.slug ?: return
         val title = s.title.ifBlank { s.detail?.data?.subject?.title ?: "Movie" }
-        val poster = s.detail?.data?.subject?.cover?.url
+        val poster = s.posterUrl?.takeIf { it.isNotBlank() } ?: s.detail?.data?.subject?.cover?.url
         val type = if (s.isSeries) "tv" else "movie"
+        val season = s.session?.season ?: s.selectedSeason
+        val episode = s.session?.episode ?: s.selectedEpisode
 
         viewModelScope.launch {
             repository.saveWatchProgress(
@@ -665,8 +729,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 slug = slug,
                 title = title,
                 posterUrl = poster,
-                season = s.selectedSeason,
-                episode = s.selectedEpisode,
+                season = season,
+                episode = episode,
                 positionMs = posMs,
                 durationMs = durMs,
                 type = type
@@ -680,7 +744,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val slug = s.slug ?: return
         val subject = s.detail?.data?.subject
         val title = s.title.ifBlank { subject?.title ?: "Movie" }
-        val poster = subject?.cover?.url
+        val poster = s.posterUrl?.takeIf { it.isNotBlank() } ?: subject?.cover?.url
         val rating = subject?.imdbRatingValue
         val year = subject?.releaseDate?.take(4)
         val genre = subject?.genre

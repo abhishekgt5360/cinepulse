@@ -1,6 +1,7 @@
 package com.example.data.repository
 
 import com.example.data.local.AppDatabase
+import com.example.data.local.EpisodeProgressEntity
 import com.example.data.local.WatchHistoryEntity
 import com.example.data.local.WatchlistEntity
 import com.example.data.model.*
@@ -334,6 +335,62 @@ class MovieRepository(
         }
     }
 
+    suspend fun getEpisodeProgress(
+        subjectId: String,
+        season: Int,
+        episode: Int,
+        isSeries: Boolean
+    ): Long = withContext(Dispatchers.IO) {
+        if (subjectId.isBlank()) return@withContext 0L
+        val se = if (isSeries) season.coerceAtLeast(1) else 0
+        val ep = if (isSeries) episode.coerceAtLeast(1) else 0
+        try {
+            val epProgress = dao.getEpisodeProgress(subjectId, se, ep)
+            if (epProgress != null) {
+                return@withContext com.example.util.ResumeManager.calculateStartPosition(
+                    positionMs = epProgress.positionMs,
+                    durationMs = epProgress.durationMs,
+                    finished = epProgress.finished
+                )
+            }
+
+            // Legacy Fallback: check watch_history
+            val history = dao.getHistory(subjectId)
+            if (history != null && history.season == se && history.episode == ep) {
+                return@withContext com.example.util.ResumeManager.calculateStartPosition(
+                    positionMs = history.positionMs,
+                    durationMs = history.durationMs,
+                    finished = false
+                )
+            }
+        } catch (_: Exception) {}
+        return@withContext 0L
+    }
+
+    suspend fun resetEpisodeProgress(
+        subjectId: String,
+        season: Int,
+        episode: Int,
+        isSeries: Boolean
+    ) = withContext(Dispatchers.IO) {
+        if (subjectId.isBlank()) return@withContext
+        val se = if (isSeries) season.coerceAtLeast(1) else 0
+        val ep = if (isSeries) episode.coerceAtLeast(1) else 0
+        try {
+            dao.upsertEpisodeProgress(
+                EpisodeProgressEntity(
+                    subjectId = subjectId,
+                    season = se,
+                    episode = ep,
+                    positionMs = 0L,
+                    durationMs = 0L,
+                    updatedAt = System.currentTimeMillis(),
+                    finished = true
+                )
+            )
+        } catch (_: Exception) {}
+    }
+
     suspend fun saveWatchProgress(
         subjectId: String,
         slug: String,
@@ -345,17 +402,38 @@ class MovieRepository(
         durationMs: Long,
         type: String?
     ) = withContext(Dispatchers.IO) {
+        if (subjectId.isBlank()) return@withContext
+        val isSeries = type.equals("tv", ignoreCase = true) || type.equals("tv-series", ignoreCase = true)
+        val se = if (isSeries) season.coerceAtLeast(1) else 0
+        val ep = if (isSeries) episode.coerceAtLeast(1) else 0
+
+        val finished = com.example.util.ResumeManager.isFinished(positionMs, durationMs)
+        val shouldSave = com.example.util.ResumeManager.shouldSavePosition(positionMs, durationMs) || finished
+
         try {
-            if (durationMs > 0 && positionMs > 0) {
+            if (shouldSave) {
+                val savePos = if (finished) 0L else positionMs
+                dao.upsertEpisodeProgress(
+                    EpisodeProgressEntity(
+                        subjectId = subjectId,
+                        season = se,
+                        episode = ep,
+                        positionMs = savePos,
+                        durationMs = durationMs,
+                        updatedAt = System.currentTimeMillis(),
+                        finished = finished
+                    )
+                )
+
                 dao.upsertHistory(
                     WatchHistoryEntity(
                         subjectId = subjectId,
                         slug = slug,
                         title = title,
                         posterUrl = posterUrl,
-                        season = season,
-                        episode = episode,
-                        positionMs = positionMs,
+                        season = se,
+                        episode = ep,
+                        positionMs = savePos,
                         durationMs = durationMs,
                         lastWatchedTimestamp = System.currentTimeMillis(),
                         type = type
@@ -368,12 +446,34 @@ class MovieRepository(
     suspend fun deleteHistory(subjectId: String) = withContext(Dispatchers.IO) {
         try {
             dao.deleteHistory(subjectId)
+            dao.deleteEpisodeProgressForSubject(subjectId)
         } catch (_: Exception) {}
     }
 
     suspend fun clearHistory() = withContext(Dispatchers.IO) {
         try {
             dao.clearHistory()
+            dao.clearEpisodeProgress()
+        } catch (_: Exception) {}
+    }
+
+    suspend fun updateWatchlistPosterIfMissing(subjectId: String, posterUrl: String) = withContext(Dispatchers.IO) {
+        if (posterUrl.isBlank()) return@withContext
+        try {
+            val existing = dao.getWatchlistItem(subjectId)
+            if (existing != null && existing.posterUrl.isNullOrBlank()) {
+                dao.addToWatchlist(existing.copy(posterUrl = posterUrl))
+            }
+        } catch (_: Exception) {}
+    }
+
+    suspend fun updateHistoryPosterIfMissing(subjectId: String, posterUrl: String) = withContext(Dispatchers.IO) {
+        if (posterUrl.isBlank()) return@withContext
+        try {
+            val existing = dao.getHistory(subjectId)
+            if (existing != null && existing.posterUrl.isNullOrBlank()) {
+                dao.upsertHistory(existing.copy(posterUrl = posterUrl))
+            }
         } catch (_: Exception) {}
     }
 

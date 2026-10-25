@@ -26,7 +26,7 @@ fun CinePulseLogo(
 ) {
     Image(
         painter = painterResource(id = R.drawable.cinepulse_logo_wide),
-        contentDescription = "CinePulse",
+        contentDescription = "Zippy",
         modifier = modifier.height(iconSize),
         contentScale = ContentScale.Fit
     )

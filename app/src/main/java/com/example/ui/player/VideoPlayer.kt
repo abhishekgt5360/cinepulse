@@ -65,6 +65,8 @@ import com.example.data.model.CaptionItem
 import com.example.data.model.StreamSource
 import com.example.ui.theme.*
 import com.example.util.CaptionPreferences
+import com.example.util.PlaybackSession
+import com.example.util.ResumeManager
 import com.example.util.StreamTokenManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -90,9 +92,10 @@ fun VideoPlayer(
     sources: List<StreamSource>,
     initialSourceIndex: Int = 0,
     captions: List<CaptionItem> = emptyList(),
-    initialPositionMs: Long = 0L,
+    session: PlaybackSession? = null,
     isSeries: Boolean = false,
     onProgressUpdate: (positionMs: Long, durationMs: Long) -> Unit,
+    onStartOver: (subjectId: String, season: Int, episode: Int, isSeries: Boolean) -> Unit = { _, _, _, _ -> },
     onBackClick: () -> Unit,
     onRefreshStream: (resumePos: Long) -> Unit = {},
     hasPreviousEpisode: Boolean = false,
@@ -139,12 +142,16 @@ fun VideoPlayer(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var autoRetryCount by remember { mutableIntStateOf(0) }
     var reconnectingMessage by remember { mutableStateOf<String?>(null) }
-    var lastValidPlaybackPosition by remember { mutableLongStateOf(initialPositionMs) }
 
     var controlsVisible by remember { mutableStateOf(true) }
     var isLocked by remember { mutableStateOf(false) }
     var currentResizeMode by remember { mutableStateOf(ResizeMode.FIT) }
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
+
+    // Session Start Position
+    val startPosMs = session?.startPositionMs ?: 0L
+    var showResumeSnackbar by remember(session?.sessionId) { mutableStateOf(startPosMs > 0L) }
+    var hasAppliedSessionStart by remember(session?.sessionId) { mutableStateOf(false) }
 
     // Gesture HUD feedback
     var doubleTapFeedback by remember { mutableStateOf<String?>(null) }
@@ -221,14 +228,15 @@ fun VideoPlayer(
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     }
 
-    // Seamless media loading
-    LaunchedEffect(currentSource, streamReloadTrigger) {
+    // Seamless media loading: applies session start position EXACTLY ONCE
+    LaunchedEffect(currentSource, session?.sessionId, streamReloadTrigger) {
         if (currentSource != null && currentSource.url.isNotBlank()) {
             val url = currentSource.url
             val currentMediaId = exoPlayer.currentMediaItem?.mediaId
             val isPlayerIdleOrError = exoPlayer.playbackState == Player.STATE_IDLE || exoPlayer.playerError != null
-            if (currentMediaId != url || isPlayerIdleOrError || streamReloadTrigger > 0) {
-                val resumePos = exoPlayer.currentPosition.takeIf { it > 0 } ?: lastValidPlaybackPosition.takeIf { it > 0 } ?: initialPositionMs
+            
+            if (!hasAppliedSessionStart || currentMediaId != url || isPlayerIdleOrError || streamReloadTrigger > 0) {
+                hasAppliedSessionStart = true
                 hasError = false
                 errorMessage = null
                 isBuffering = true
@@ -237,7 +245,7 @@ fun VideoPlayer(
                         .setMediaId(url)
                         .setUri(url)
                         .build()
-                    exoPlayer.setMediaItem(mediaItem, resumePos.coerceAtLeast(0L))
+                    exoPlayer.setMediaItem(mediaItem, startPosMs.coerceAtLeast(0L))
                     exoPlayer.prepare()
                     exoPlayer.play()
                 } catch (e: Exception) {
@@ -277,8 +285,9 @@ fun VideoPlayer(
         }
     }
 
-    // Subtitle sync & position tick
-    LaunchedEffect(exoPlayer) {
+    // Subtitle sync, position tick, and 10s periodic watch progress saving
+    LaunchedEffect(exoPlayer, session?.sessionId) {
+        var saveCounter = 0
         while (true) {
             delay(250)
             if (exoPlayer.playbackState != Player.STATE_IDLE) {
@@ -286,15 +295,21 @@ fun VideoPlayer(
                 val dur = exoPlayer.duration.coerceAtLeast(0L)
                 currentPosition = pos
                 duration = dur
-                if (pos > 1000L) {
-                    lastValidPlaybackPosition = pos
-                }
 
                 if (parsedSubtitles.isNotEmpty()) {
                     val matchingCue = parsedSubtitles.firstOrNull { pos in it.startTimeMs..it.endTimeMs }
                     currentSubtitleText = matchingCue?.text ?: ""
                 } else {
                     currentSubtitleText = ""
+                }
+
+                // Periodic save every 10 seconds while playing and READY
+                saveCounter++
+                if (saveCounter >= 40) {
+                    saveCounter = 0
+                    if (exoPlayer.isPlaying && dur > 0 && exoPlayer.playbackState == Player.STATE_READY) {
+                        onProgressUpdate(pos, dur)
+                    }
                 }
             }
         }
@@ -321,16 +336,6 @@ fun VideoPlayer(
         }
     }
 
-    // Progress persistence
-    LaunchedEffect(exoPlayer) {
-        while (true) {
-            delay(5000)
-            if (exoPlayer.isPlaying && exoPlayer.duration > 0) {
-                onProgressUpdate(exoPlayer.currentPosition, exoPlayer.duration)
-            }
-        }
-    }
-
     // Auto-hide controls
     LaunchedEffect(controlsVisible, isPlaying, isLocked) {
         if (controlsVisible && isPlaying && !isLocked) {
@@ -344,6 +349,9 @@ fun VideoPlayer(
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
                 updateKeepScreenOn(playing, exoPlayer.playbackState, hasError)
+                if (!playing && exoPlayer.duration > 0 && exoPlayer.currentPosition > 0) {
+                    onProgressUpdate(exoPlayer.currentPosition, exoPlayer.duration)
+                }
             }
 
             override fun onPlaybackStateChanged(state: Int) {
@@ -354,11 +362,15 @@ fun VideoPlayer(
                     hasError = false
                     autoRetryCount = 0
                     reconnectingMessage = null
+                } else if (state == Player.STATE_ENDED) {
+                    if (exoPlayer.duration > 0) {
+                        onProgressUpdate(exoPlayer.duration, exoPlayer.duration)
+                    }
                 }
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                val resumePos = exoPlayer.currentPosition.takeIf { it > 0 } ?: lastValidPlaybackPosition
+                val resumePos = exoPlayer.currentPosition.takeIf { it > 0 } ?: startPosMs
                 val isContainerError = error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
                         error.errorCodeName.contains("CONTAINER", ignoreCase = true) ||
                         error.message?.contains("malformed", ignoreCase = true) == true
@@ -565,6 +577,56 @@ fun VideoPlayer(
             }
         }
 
+        // Resumed Snackbar Notice with "Start over" action
+        if (showResumeSnackbar && startPosMs > 0L) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = if (controlsVisible) 76.dp else 24.dp)
+                    .padding(horizontal = 24.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
+                    border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null,
+                    modifier = Modifier.padding(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Resumed from ${ResumeManager.formatTimeLabel(startPosMs)}",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        TextButton(
+                            onClick = {
+                                showResumeSnackbar = false
+                                exoPlayer.seekTo(0L)
+                                currentPosition = 0L
+                                if (session != null) {
+                                    onStartOver(session.subjectId, session.season, session.episode, session.isSeries)
+                                }
+                            },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Start over",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Double-tap visual feedback
         doubleTapFeedback?.let { feedback ->
             Box(
@@ -736,7 +798,7 @@ fun VideoPlayer(
                                     isBuffering = true
                                     autoRetryCount = 0
                                     reconnectingMessage = "Fetching fresh stream token..."
-                                    val safePos = lastValidPlaybackPosition.coerceAtLeast(0L)
+                                    val safePos = currentPosition.coerceAtLeast(0L)
                                     scope.launch {
                                         val freshSources = withContext(Dispatchers.IO) {
                                             StreamTokenManager.forceRefreshSources()
@@ -758,8 +820,8 @@ fun VideoPlayer(
                                     }
                                 },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
                                 ),
                                 modifier = Modifier.height(38.dp)
                             ) {
@@ -776,7 +838,7 @@ fun VideoPlayer(
                                     scope.launch {
                                         try {
                                             val url = currentSource?.url
-                                            val safePos = lastValidPlaybackPosition.coerceAtLeast(0L)
+                                            val safePos = currentPosition.coerceAtLeast(0L)
                                             if (!url.isNullOrBlank()) {
                                                 val mediaItem = MediaItem.Builder().setMediaId(url).setUri(url).build()
                                                 exoPlayer.setMediaItem(mediaItem, safePos)
@@ -786,7 +848,7 @@ fun VideoPlayer(
                                             exoPlayer.prepare()
                                             exoPlayer.play()
                                         } catch (_: Exception) {
-                                            onRefreshStream(lastValidPlaybackPosition)
+                                            onRefreshStream(currentPosition)
                                             streamReloadTrigger++
                                         }
                                     }
@@ -796,9 +858,9 @@ fun VideoPlayer(
                             ) {
                                 Icon(Icons.Default.PlayArrow, contentDescription = "Resume", modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                val resumeTime = formatTime(lastValidPlaybackPosition)
+                                val resumeTime = formatTime(currentPosition)
                                 Text(
-                                    if (lastValidPlaybackPosition > 5000L) "Resume ($resumeTime)" else "Retry",
+                                    if (currentPosition > 5000L) "Resume ($resumeTime)" else "Retry",
                                     fontSize = 12.sp
                                 )
                             }
@@ -985,13 +1047,13 @@ fun VideoPlayer(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
                                     .clickable { showQualityDialog = true },
-                                color = MaterialTheme.colorScheme.primaryContainer
+                                color = MaterialTheme.colorScheme.primary
                             ) {
                                 Text(
                                     text = currentSource?.resolution ?: "AUTO",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        color = MaterialTheme.colorScheme.onPrimary,
                                         fontSize = 11.sp
                                     ),
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -1085,7 +1147,7 @@ fun VideoPlayer(
                         modifier = Modifier
                             .size(60.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .background(MaterialTheme.colorScheme.primary)
                             .then(if (isHighContrast) Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape) else Modifier)
                             .clickable {
                                 if (isPlaying) exoPlayer.pause() else exoPlayer.play()
@@ -1096,7 +1158,7 @@ fun VideoPlayer(
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = if (isPlaying) "Pause" else "Play",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(34.dp)
                         )
                     }
@@ -1411,14 +1473,14 @@ fun VideoPlayer(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (subtitleDialogTab == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                            color = if (subtitleDialogTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
                             modifier = Modifier
                                 .weight(1f)
                                 .clickable { subtitleDialogTab = 0 }
                         ) {
                             Text(
                                 text = "Tracks",
-                                color = if (subtitleDialogTab == 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (subtitleDialogTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 textAlign = TextAlign.Center,
@@ -1427,14 +1489,14 @@ fun VideoPlayer(
                         }
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (subtitleDialogTab == 1) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                            color = if (subtitleDialogTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
                             modifier = Modifier
                                 .weight(1f)
                                 .clickable { subtitleDialogTab = 1 }
                         ) {
                             Text(
                                 text = "Style & Transparency",
-                                color = if (subtitleDialogTab == 1) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (subtitleDialogTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 textAlign = TextAlign.Center,
@@ -1586,7 +1648,7 @@ fun VideoPlayer(
                                         ),
                                         modifier = Modifier.padding(
                                             horizontal = if (captionBgOpacity > 0.05f) 10.dp else 4.dp,
-                                            vertical = if (captionBgOpacity > 0.05f) 6.dp else 2.dp
+                                            vertical = if (captionBgOpacity > 0.05f) 5.dp else 2.dp
                                         ),
                                         textAlign = TextAlign.Center
                                     )
