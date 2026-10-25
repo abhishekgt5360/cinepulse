@@ -195,11 +195,6 @@ private fun HeroBannerSlide(
                 .align(Alignment.BottomStart)
                 .padding(horizontal = 20.dp, vertical = 26.dp)
         ) {
-            // Spotlight Tag
-            PosterBadge(text = "FEATURED SPOTLIGHT")
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             // Movie/Show Title
             Text(
                 text       = item.safeName,

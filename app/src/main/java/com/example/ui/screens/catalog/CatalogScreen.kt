@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import com.example.data.model.MovieItem
 import com.example.ui.CatalogType
 import com.example.ui.CatalogUiState
@@ -56,9 +57,17 @@ fun CatalogScreen(
     onSortSelected: (String) -> Unit,
     onMovieClick: (MovieItem) -> Unit,
     onLoadMore: () -> Unit,
+    onResetFilters: () -> Unit = {},
+    onRetry: () -> Unit = {},
+    isAdultEnabled: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val gridState = rememberLazyGridState()
+    val coroutineScope = rememberCoroutineScope()
+    val availablePresets = remember(isAdultEnabled) {
+        RegionalCategoryConfig.PRESETS.filter { !it.requiresAdultOptIn || isAdultEnabled }
+    }
+    val isAdultPresetSelected = uiState.selectedRegion.equals(RegionalCategoryConfig.ADULT_LABEL, ignoreCase = true)
 
     // Load more when reaching bottom of catalog grid
     val shouldLoadMore by remember {
@@ -138,7 +147,10 @@ fun CatalogScreen(
                                 .clip(shape)
                                 .background(containerColor)
                                 .then(if (border != null) Modifier.border(border, shape) else Modifier)
-                                .clickable { onTypeSelected(catalogType) }
+                                .clickable {
+                                    onTypeSelected(catalogType)
+                                    coroutineScope.launch { gridState.scrollToItem(0) }
+                                }
                                 .padding(vertical = 9.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -184,12 +196,15 @@ fun CatalogScreen(
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                RegionalCategoryConfig.REGION_PRESETS.forEach { regionPreset ->
-                    val isSelected = uiState.selectedRegion == regionPreset.label
+                availablePresets.forEach { preset ->
+                    val isSelected = uiState.selectedRegion.equals(preset.label, ignoreCase = true)
                     GlassChip(
-                        label = regionPreset.label,
+                        label = preset.label,
                         selected = isSelected,
-                        onClick = { onRegionSelected(regionPreset.label) }
+                        onClick = {
+                            onRegionSelected(preset.label)
+                            coroutineScope.launch { gridState.scrollToItem(0) }
+                        }
                     )
                 }
             }
@@ -207,26 +222,34 @@ fun CatalogScreen(
                     GlassChip(
                         label = label,
                         selected = isSelected,
-                        onClick = { onSortSelected(sortKey) }
+                        onClick = {
+                            onSortSelected(sortKey)
+                            coroutineScope.launch { gridState.scrollToItem(0) }
+                        }
                     )
                 }
             }
 
-            // Genre chips
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                GENRES.forEach { genre ->
-                    val isSelected = uiState.selectedGenre == genre
-                    GlassChip(
-                        label = genre,
-                        selected = isSelected,
-                        onClick = { onGenreSelected(genre) }
-                    )
+            // Genre chips (Hidden when Adult preset is selected)
+            if (!isAdultPresetSelected) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    GENRES.forEach { genre ->
+                        val isSelected = uiState.selectedGenre == genre
+                        GlassChip(
+                            label = genre,
+                            selected = isSelected,
+                            onClick = {
+                                onGenreSelected(genre)
+                                coroutineScope.launch { gridState.scrollToItem(0) }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -244,25 +267,26 @@ fun CatalogScreen(
                 )
             }
         } else if (uiState.items.isEmpty() && uiState.errorMessage != null) {
-            // Glass error panel
+            // Error panel
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .padding(28.dp)
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        modifier = Modifier.padding(28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text(
                             text = "Unable to Load",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -273,6 +297,54 @@ fun CatalogScreen(
                             ),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = onRetry,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
+                            Text("Retry", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        } else if (uiState.items.isEmpty() && !uiState.isLoading) {
+            // Empty state
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Nothing Found",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Nothing found for this filter.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(onClick = onResetFilters) {
+                            Text("Reset Filters", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }

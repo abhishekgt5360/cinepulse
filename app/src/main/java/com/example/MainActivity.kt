@@ -133,6 +133,7 @@ fun MainApp(
     val catalogState by viewModel.catalogState.collectAsStateWithLifecycle()
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
     val detailState by viewModel.detailPlayerState.collectAsStateWithLifecycle()
+    val isAdultEnabled by viewModel.isAdultEnabled.collectAsStateWithLifecycle()
 
     val watchHistory by viewModel.watchHistory.collectAsStateWithLifecycle()
     val watchlist by viewModel.watchlist.collectAsStateWithLifecycle()
@@ -253,6 +254,8 @@ fun MainApp(
                     currentThemeMode = viewModel.themeMode.collectAsStateWithLifecycle().value,
                     onThemeSelected = { viewModel.setThemeMode(it) },
                     onBackClick = { showAppearanceScreen = false },
+                    isAdultEnabled = isAdultEnabled,
+                    onAdultToggle = { enabled -> viewModel.setAdultEnabled(enabled) },
                     onOpenThemeQa = if (BuildConfig.DEBUG) { { showThemeQaScreen = true } } else null
                 )
             } else if (isDetailOpen) {
@@ -336,7 +339,10 @@ fun MainApp(
                             onMovieClick = { movie ->
                                 viewModel.openDetail(movie.safeSlug, movie.subjectId, movie.safeName, movie.type)
                             },
-                            onLoadMore = { viewModel.loadCatalog(reset = false) }
+                            onLoadMore = { viewModel.loadCatalog(reset = false) },
+                            onResetFilters = { viewModel.resetCatalogFilters() },
+                            onRetry = { viewModel.loadCatalog(reset = true) },
+                            isAdultEnabled = isAdultEnabled
                         )
                     }
 

@@ -6,8 +6,12 @@ import com.example.data.local.WatchlistEntity
 import com.example.data.model.*
 import com.example.data.remote.MovieApiService
 import com.example.data.remote.NetworkClient
+import com.example.util.CatalogPreset
 import com.example.util.RegionalCategoryConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
@@ -145,7 +149,68 @@ class MovieRepository(
         getRegionCatalog(type = com.example.ui.CatalogType.ANIMATION, genre = genre, sort = sort, page = page)
 
     suspend fun getBollywoodMovies(page: Int = 1): Result<CatalogResponse> =
-        getRegionCatalog(type = com.example.ui.CatalogType.MOVIES, country = RegionalCategoryConfig.REGION_PRESETS.firstOrNull { it.country != null }?.country ?: "India", page = page)
+        getRegionCatalog(type = com.example.ui.CatalogType.MOVIES, country = "India", page = page)
+
+    suspend fun getPresetCatalog(
+        preset: CatalogPreset,
+        type: com.example.ui.CatalogType = com.example.ui.CatalogType.MOVIES,
+        genre: String? = null,
+        sort: String? = null,
+        page: Int = 1
+    ): Result<CatalogResponse> = withContext(Dispatchers.IO) {
+        if (preset.countries.isNotEmpty()) {
+            try {
+                val countryResponses = coroutineScope {
+                    preset.countries.map { countryName ->
+                        async {
+                            getRegionCatalog(
+                                type = type,
+                                country = countryName,
+                                genre = preset.genre ?: genre,
+                                sort = sort,
+                                page = page
+                            ).getOrNull()
+                        }
+                    }.awaitAll().filterNotNull()
+                }
+
+                if (countryResponses.isEmpty()) {
+                    return@withContext Result.failure(java.io.IOException("Failed to load multi-country catalog"))
+                }
+
+                val lists = countryResponses.map { it.items }
+                val maxListLen = lists.maxOfOrNull { it.size } ?: 0
+                val interleaved = mutableListOf<MovieItem>()
+                val seenIds = mutableSetOf<String>()
+
+                for (i in 0 until maxListLen) {
+                    for (list in lists) {
+                        if (i < list.size) {
+                            val item = list[i]
+                            val id = item.subjectId.ifBlank { item.safeSlug }
+                            if (id.isNotBlank() && seenIds.add(id)) {
+                                interleaved.add(item)
+                            }
+                        }
+                    }
+                }
+
+                val hasMore = countryResponses.any { it.hasMore == true }
+                Result.success(CatalogResponse(page = page, hasMore = hasMore, items = interleaved))
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Result.failure(e)
+            }
+        } else {
+            getRegionCatalog(
+                type = type,
+                country = preset.country,
+                genre = preset.genre ?: genre,
+                sort = sort,
+                page = page
+            )
+        }
+    }
 
     suspend fun search(query: String, page: Int = 1): Result<SearchResponse> =
         withContext(Dispatchers.IO) {

@@ -109,6 +109,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _themeMode.value = mode
     }
 
+    private val _isAdultEnabled = MutableStateFlow(prefs.getBoolean("adult_enabled", false))
+    val isAdultEnabled: StateFlow<Boolean> = _isAdultEnabled.asStateFlow()
+
+    fun setAdultEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("adult_enabled", enabled).apply()
+        _isAdultEnabled.value = enabled
+
+        if (!enabled && _catalogState.value.selectedRegion == RegionalCategoryConfig.ADULT_LABEL) {
+            setCatalogRegion("All")
+        }
+        loadHomeFeed()
+    }
+
+    private fun isAdultItem(item: MovieItem): Boolean {
+        val g = item.genre.orEmpty()
+        return g.contains("Adult", ignoreCase = true) ||
+               g.contains("Erotica", ignoreCase = true) ||
+               g.contains("18+", ignoreCase = true) ||
+               g.contains("Erotic", ignoreCase = true)
+    }
+
     private val database = AppDatabase.getInstance(application)
     private val repository = MovieRepository(database = database, context = application)
 
@@ -261,12 +282,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             homeResult.onSuccess { response ->
                 val sections = response.sections.orEmpty()
                 val bannerSection = sections.firstOrNull { it.section.equals("Banner", ignoreCase = true) }
-                val bannerItems = bannerSection?.items.orEmpty()
+                val rawBannerItems = bannerSection?.items.orEmpty()
+                val bannerItems = if (_isAdultEnabled.value) rawBannerItems else rawBannerItems.filter { !isAdultItem(it) }
+
                 val otherSections = sections
                     .filter { !it.section.equals("Banner", ignoreCase = true) && !it.section.contains("Nollywood", ignoreCase = true) && it.items.isNotEmpty() }
+                    .map { section ->
+                        val filteredItems = if (_isAdultEnabled.value) section.items else section.items.filter { !isAdultItem(it) }
+                        section.copy(items = filteredItems)
+                    }
+                    .filter { it.items.isNotEmpty() }
                     .toMutableList()
 
-                val bollyItems = bollyResult.getOrNull()?.items.orEmpty()
+                val rawBollyItems = bollyResult.getOrNull()?.items.orEmpty()
+                val bollyItems = if (_isAdultEnabled.value) rawBollyItems else rawBollyItems.filter { !isAdultItem(it) }
                 if (bollyItems.isNotEmpty()) {
                     otherSections.add(0, HomeSection(section = RegionalCategoryConfig.ROW_TITLE, count = bollyItems.size, items = bollyItems))
                 }
@@ -321,6 +350,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setCatalogRegion(region: String) {
+        val preset = RegionalCategoryConfig.PRESETS.firstOrNull { it.label.equals(region, ignoreCase = true) }
+        if (preset != null && preset.requiresAdultOptIn && !_isAdultEnabled.value) {
+            return
+        }
         if (_catalogState.value.selectedRegion != region) {
             _catalogState.update { it.copy(selectedRegion = region, page = 1) }
             loadCatalog(reset = true)
@@ -341,6 +374,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun resetCatalogFilters() {
+        _catalogState.update {
+            it.copy(
+                selectedRegion = "All",
+                selectedGenre = "All",
+                selectedSort = "foryou",
+                page = 1
+            )
+        }
+        loadCatalog(reset = true)
+    }
+
     fun loadCatalog(reset: Boolean = false) {
         viewModelScope.launch {
             val currentState = _catalogState.value
@@ -348,11 +393,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (!reset && !currentState.hasMore) return@launch
 
-            val regionPreset = RegionalCategoryConfig.REGION_PRESETS.firstOrNull { it.label.equals(currentState.selectedRegion, ignoreCase = true) }
-            val countryParam = regionPreset?.country
-            val genreParam = if (currentState.selectedGenre == "All") null else currentState.selectedGenre
+            val preset = RegionalCategoryConfig.PRESETS.firstOrNull { it.label.equals(currentState.selectedRegion, ignoreCase = true) }
+                ?: RegionalCategoryConfig.PRESETS.first()
+
+            val countryParam = preset.country
+            val genreParam = if (preset.genre != null) preset.genre else if (currentState.selectedGenre == "All") null else currentState.selectedGenre
             val sortParam = currentState.selectedSort
-            val cacheKey = "${currentState.type.name.lowercase()}_${targetPage}_${sortParam}_${genreParam}_${countryParam}"
+            val cacheKey = "${currentState.type.name.lowercase()}_${targetPage}_${sortParam}_${genreParam}_${countryParam}_${preset.id}"
 
             // Immediately display cached catalog items if available on reset
             if (reset) {
@@ -373,9 +420,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _catalogState.update { it.copy(isLoading = true, errorMessage = null) }
             }
 
-            val result = repository.getRegionCatalog(
+            val result = repository.getPresetCatalog(
+                preset = preset,
                 type = currentState.type,
-                country = countryParam,
                 genre = genreParam,
                 sort = sortParam,
                 page = targetPage

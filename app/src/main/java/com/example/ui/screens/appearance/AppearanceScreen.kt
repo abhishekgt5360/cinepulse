@@ -12,6 +12,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,8 +33,11 @@ fun AppearanceScreen(
     currentThemeMode: ThemeMode,
     onThemeSelected: (ThemeMode) -> Unit,
     onBackClick: () -> Unit,
+    isAdultEnabled: Boolean = false,
+    onAdultToggle: (Boolean) -> Unit = {},
     onOpenThemeQa: (() -> Unit)? = null
 ) {
+    var showAdultConfirmDialog by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -119,6 +126,60 @@ fun AppearanceScreen(
                 outlineSwatch = PaperScheme.primary
             )
 
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "Content Settings",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Adult content (18+)",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Show 18+ adult content preset and filters",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = isAdultEnabled,
+                        onCheckedChange = { checked ->
+                            if (checked) {
+                                showAdultConfirmDialog = true
+                            } else {
+                                onAdultToggle(false)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        )
+                    )
+                }
+            }
+
             if (onOpenThemeQa != null) {
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedButton(
@@ -129,6 +190,47 @@ fun AppearanceScreen(
                 }
             }
         }
+    }
+
+    if (showAdultConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showAdultConfirmDialog = false },
+            title = {
+                Text(
+                    text = "Adult Content Confirmation",
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "This shows content for adults only. Confirm that you are 18 or older.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showAdultConfirmDialog = false
+                        onAdultToggle(true)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Text("I am 18+", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showAdultConfirmDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
     }
 }
 
