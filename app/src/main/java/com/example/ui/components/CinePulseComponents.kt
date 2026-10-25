@@ -9,6 +9,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,6 +23,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -304,7 +309,7 @@ fun GlassIconButton(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PosterImage -> Shared Uncropped Poster Component
+// PosterImage -> Shared Uncropped Poster Component with Aspect Ratio Detection
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -312,16 +317,25 @@ fun PosterImage(
     imageUrl: String?,
     contentDescription: String?,
     modifier: Modifier = Modifier,
+    title: String? = null,
+    subtitle: String? = null,
+    titleBelow: Boolean = true,
     aspectRatio: Float = 2f / 3f,
     shape: Shape = RoundedCornerShape(12.dp),
     overlay: @Composable BoxScope.() -> Unit = {}
 ) {
+    val context = LocalContext.current
     val isHighContrast = LocalHighContrast.current
     val border = if (isHighContrast) {
         BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)
     } else {
         BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
     }
+
+    var detectedRatio by remember(imageUrl) {
+        mutableStateOf(com.example.util.PosterAspectCache.getRatio(imageUrl))
+    }
+    val category = com.example.util.PosterAspectCache.classify(detectedRatio)
 
     Box(
         modifier = modifier
@@ -332,18 +346,99 @@ fun PosterImage(
         contentAlignment = Alignment.Center
     ) {
         if (!imageUrl.isNullOrBlank()) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(imageUrl)
-                    .scale(Scale.FIT)
-                    .crossfade(200)
-                    .build(),
-                contentDescription = contentDescription,
-                contentScale = ContentScale.Fit,
-                alignment = Alignment.Center,
-                modifier = Modifier.fillMaxSize()
-            )
+            when {
+                // Wide or Squareish image, and title is NOT drawn below the card elsewhere
+                (category == com.example.util.ImageAspectRatioCategory.WIDE || category == com.example.util.ImageAspectRatioCategory.SQUAREISH) && !titleBelow -> {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                            contentAlignment = Alignment.TopCenter
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(imageUrl)
+                                    .scale(Scale.FIT)
+                                    .crossfade(200)
+                                    .build(),
+                                contentDescription = contentDescription,
+                                contentScale = ContentScale.Fit,
+                                alignment = Alignment.TopCenter,
+                                onSuccess = { state ->
+                                    val d = state.result.drawable
+                                    if (d.intrinsicWidth > 0 && d.intrinsicHeight > 0) {
+                                        val r = d.intrinsicWidth.toFloat() / d.intrinsicHeight.toFloat()
+                                        com.example.util.PosterAspectCache.putRatio(imageUrl, r)
+                                        detectedRatio = r
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        // Themed bottom strip displaying title & subtitle
+                        if (!title.isNullOrBlank() || !subtitle.isNullOrBlank()) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                                ) {
+                                    if (!title.isNullOrBlank()) {
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.labelMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            ),
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    if (!subtitle.isNullOrBlank()) {
+                                        Text(
+                                            text = subtitle,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            ),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Default/Portrait or Wide with title below: Fill/Fit centered on surfaceContainerHighest
+                else -> {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(imageUrl)
+                            .scale(Scale.FIT)
+                            .crossfade(200)
+                            .build(),
+                        contentDescription = contentDescription,
+                        contentScale = ContentScale.Fit,
+                        alignment = Alignment.Center,
+                        onSuccess = { state ->
+                            val d = state.result.drawable
+                            if (d.intrinsicWidth > 0 && d.intrinsicHeight > 0) {
+                                val r = d.intrinsicWidth.toFloat() / d.intrinsicHeight.toFloat()
+                                com.example.util.PosterAspectCache.putRatio(imageUrl, r)
+                                detectedRatio = r
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
         }
+
         overlay()
     }
 }
