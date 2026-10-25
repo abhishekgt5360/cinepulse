@@ -1,6 +1,8 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -13,7 +15,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.ui.theme.LocalHighContrast
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LiquidGlassCard -> Material 3 Card
@@ -26,11 +28,17 @@ fun LiquidGlassCard(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
+    val isHighContrast = LocalHighContrast.current
+    val border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null
+    val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+
     if (onClick != null) {
         Card(
             onClick = onClick,
             modifier = modifier,
             shape = RoundedCornerShape(cornerRadius),
+            border = border,
+            elevation = elevation,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer
             )
@@ -41,6 +49,8 @@ fun LiquidGlassCard(
         Card(
             modifier = modifier,
             shape = RoundedCornerShape(cornerRadius),
+            border = border,
+            elevation = elevation,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer
             )
@@ -56,12 +66,13 @@ fun LiquidGlassCard(
 
 @Composable
 fun LiquidGlassGrip(modifier: Modifier = Modifier) {
+    val isHighContrast = LocalHighContrast.current
     Box(
         modifier = modifier
             .width(32.dp)
             .height(4.dp)
             .clip(RoundedCornerShape(2.dp))
-            .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+            .background(if (isHighContrast) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
     )
 }
 
@@ -74,9 +85,11 @@ fun LiquidGlassPill(
     label: String,
     modifier: Modifier = Modifier
 ) {
+    val isHighContrast = LocalHighContrast.current
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
+        border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null,
         color = MaterialTheme.colorScheme.tertiaryContainer,
         contentColor = MaterialTheme.colorScheme.onTertiaryContainer
     ) {
@@ -100,9 +113,11 @@ fun LiquidGlassPill(
     modifier: Modifier = Modifier,
     textStyle: TextStyle = MaterialTheme.typography.labelMedium
 ) {
+    val isHighContrast = LocalHighContrast.current
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(8.dp),
+        border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null,
         color = MaterialTheme.colorScheme.tertiaryContainer,
         contentColor = MaterialTheme.colorScheme.onTertiaryContainer
     ) {
@@ -132,10 +147,20 @@ fun LiquidGlassButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    val isHighContrast = LocalHighContrast.current
+    val border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null
+    val elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+
     Button(
         onClick = onClick,
         modifier = modifier.height(48.dp),
-        enabled = enabled
+        enabled = enabled,
+        border = border,
+        elevation = elevation,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
     ) {
         Icon(
             imageVector = icon,
@@ -161,9 +186,16 @@ fun LiquidGlassSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isHighContrast = LocalHighContrast.current
+    val border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else ButtonDefaults.outlinedButtonBorder(enabled = true)
+
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.height(48.dp)
+        modifier = modifier.height(48.dp),
+        border = border,
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
     ) {
         Icon(
             imageVector = icon,
@@ -189,10 +221,23 @@ fun GlassChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isHighContrast = LocalHighContrast.current
+    val border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else FilterChipDefaults.filterChipBorder(enabled = true, selected = selected)
+
     FilterChip(
         selected = selected,
         onClick = onClick,
         label = { Text(text = label) },
+        border = border,
+        colors = if (isHighContrast && selected) {
+            FilterChipDefaults.filterChipColors(
+                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+            )
+        } else {
+            FilterChipDefaults.filterChipColors()
+        },
         modifier = modifier
     )
 }
@@ -209,9 +254,12 @@ fun GlassIconButton(
     modifier: Modifier = Modifier,
     tint: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface
 ) {
+    val isHighContrast = LocalHighContrast.current
+    val borderModifier = if (isHighContrast) Modifier.border(BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(24.dp)) else Modifier
+
     IconButton(
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier.then(borderModifier)
     ) {
         Icon(
             imageVector = icon,

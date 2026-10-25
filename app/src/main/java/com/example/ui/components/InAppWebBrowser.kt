@@ -193,7 +193,7 @@ fun InAppWebBrowserDialog(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                                 contentDescription = "Open in Chrome/Browser",
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -207,7 +207,7 @@ fun InAppWebBrowserDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(2.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.primary,
                         trackColor = Color.Transparent
                     )
                 } else {
@@ -218,7 +218,7 @@ fun InAppWebBrowserDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.White)
+                        .background(MaterialTheme.colorScheme.surface)
                 ) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),

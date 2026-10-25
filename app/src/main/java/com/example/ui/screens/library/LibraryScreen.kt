@@ -272,7 +272,7 @@ private fun HistoryRowCard(
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = "Resume",
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -288,7 +288,7 @@ private fun HistoryRowCard(
                         .height(3.dp)
                         .align(Alignment.BottomCenter),
                     color = MaterialTheme.colorScheme.primary,
-                    trackColor = Color.White.copy(alpha = 0.2f)
+                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
                 )
             }
 
@@ -411,7 +411,7 @@ fun LibraryScreen(
                     Icon(
                         imageVector = Icons.Default.Code,
                         contentDescription = "Developer Credit",
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }

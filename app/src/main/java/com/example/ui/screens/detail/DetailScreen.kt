@@ -530,7 +530,7 @@ fun DetailScreen(
                                                 .border(0.7.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
                                                 .padding(horizontal = 7.dp, vertical = 3.dp)
                                         ) {
-                                            Text("🇮🇳 हिन्दी", color = PureWhite, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                            Text("🇮🇳 हिन्दी", color = MaterialTheme.colorScheme.onSurface, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }
@@ -634,7 +634,7 @@ fun DetailScreen(
                                      .padding(vertical = 4.dp)
                                      .clip(RoundedCornerShape(14.dp))
                                      .background(
-                                         if (isCurrentEp) Color(0x22EE1E50) else PitchBlack
+                                         if (isCurrentEp) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
                                      )
                                      .border(
                                          if (isCurrentEp) 1.dp else 0.7.dp,
@@ -662,7 +662,7 @@ fun DetailScreen(
                                                  ),
                                              contentAlignment = Alignment.Center
                                          ) {
-                                             Icon(Icons.Default.PlayArrow, null, tint = PureWhite, modifier = Modifier.size(18.dp))
+                                             Icon(Icons.Default.PlayArrow, null, tint = if (isCurrentEp) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
                                          }
                                          Spacer(Modifier.width(12.dp))
                                          Column {
@@ -689,7 +689,7 @@ fun DetailScreen(
                                             contentDescription = "Download",
                                             onClick = { currentSeason?.let { triggerDownload(it.se, epNum) } },
                                             modifier = Modifier.size(32.dp),
-                                            tint = PureWhite
+                                            tint = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
                                 }

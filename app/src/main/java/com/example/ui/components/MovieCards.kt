@@ -3,7 +3,9 @@ package com.example.ui.components
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -52,7 +54,7 @@ import com.example.data.model.MovieItem
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import com.example.ui.theme.PureWhite
+import com.example.ui.theme.LocalHighContrast
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,6 +70,9 @@ fun MoviePosterCard(
 ) {
     val shape = RoundedCornerShape(16.dp)
 
+    val isHighContrast = LocalHighContrast.current
+    val border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+
     Column(
         modifier = modifier
             .width(cardWidth)
@@ -79,6 +84,7 @@ fun MoviePosterCard(
                 .height(cardHeight)
                 .clip(shape)
                 .background(MaterialTheme.colorScheme.surfaceContainer)
+                .border(border, shape)
                 .clickable { onClick() }
         ) {
             // Poster image
@@ -157,7 +163,7 @@ fun MoviePosterCard(
         Spacer(Modifier.height(7.dp))
         Text(
             text = movie.safeName,
-            color = PureWhite,
+            color = MaterialTheme.colorScheme.onBackground,
             fontSize = 12.5.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 2,
@@ -205,12 +211,16 @@ fun ContinueWatchingCard(
         label = "cw_scale"
     )
 
+    val isHighContrast = LocalHighContrast.current
+    val border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+
     Column(
         modifier = modifier
             .width(210.dp)
             .scale(scale)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceContainer)
+            .border(border, shape)
             .clickable(interactionSource = interactionSource, indication = null) { onPlayClick() }
             .testTag("continue_card_${history.subjectId}")
     ) {
@@ -254,7 +264,7 @@ fun ContinueWatchingCard(
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Resume",
-                    tint = PureWhite,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -273,7 +283,7 @@ fun ContinueWatchingCard(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Remove",
-                    tint = PureWhite,
+                    tint = Color.White,
                     modifier = Modifier.size(14.dp)
                 )
             }

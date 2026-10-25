@@ -71,6 +71,14 @@ val OledSurfaceContainer = Color(0xFF121212)
 val OledSurfaceContainerHigh = Color(0xFF1E1E1E)
 val OledSurfaceContainerHighest = Color(0xFF2A2A2A)
 
+// HIGH CONTRAST SCHEME
+val HighContrastOutline = Color(0xFF8C8C8C)
+
+// PAPER SCHEME
+val PaperBackground = Color(0xFFFAF7F2)
+val PaperPrimaryContainer = Color(0xFFDDD7CA)
+val PaperPrimary = Color(0xFF1A1A1A)
+
 // Legacy aliases for the VideoPlayer (kept to avoid heavy modifications to player internals)
 val LogoRed = Color(0xFFEE1E50)
 val PureWhite = Color(0xFFFFFFFF)

@@ -3,10 +3,11 @@ package com.example.ui.screens.appearance
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -17,7 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.ui.theme.HighContrastScheme
+import com.example.ui.theme.OledScheme
+import com.example.ui.theme.PaperScheme
 import com.example.ui.theme.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +50,7 @@ fun AppearanceScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -62,7 +66,7 @@ fun AppearanceScreen(
                 subtitle = "Default dark theme with crimson accents",
                 selected = currentThemeMode == ThemeMode.CRIMSON,
                 onClick = { onThemeSelected(ThemeMode.CRIMSON) },
-                primarySwatch = Color(0xFFFFB2BC),
+                primarySwatch = MaterialTheme.colorScheme.primary,
                 backgroundSwatch = Color(0xFF1A1112)
             )
 
@@ -72,8 +76,8 @@ fun AppearanceScreen(
                 subtitle = "Pitch black background for AMOLED screens",
                 selected = currentThemeMode == ThemeMode.OLED,
                 onClick = { onThemeSelected(ThemeMode.OLED) },
-                primarySwatch = Color(0xFFFF5A78),
-                backgroundSwatch = Color(0xFF000000)
+                primarySwatch = OledScheme.primary,
+                backgroundSwatch = OledScheme.background
             )
 
             // System Colors Option (Dynamic)
@@ -91,6 +95,28 @@ fun AppearanceScreen(
                 primarySwatch = MaterialTheme.colorScheme.primary,
                 backgroundSwatch = MaterialTheme.colorScheme.surface
             )
+
+            // High Contrast Option
+            ThemeOptionCard(
+                title = "High contrast",
+                subtitle = "Black and white with outlines",
+                selected = currentThemeMode == ThemeMode.HIGH_CONTRAST,
+                onClick = { onThemeSelected(ThemeMode.HIGH_CONTRAST) },
+                primarySwatch = HighContrastScheme.primary,
+                backgroundSwatch = HighContrastScheme.background,
+                outlineSwatch = HighContrastScheme.outline
+            )
+
+            // Paper Option
+            ThemeOptionCard(
+                title = "Paper",
+                subtitle = "Warm off-white, light",
+                selected = currentThemeMode == ThemeMode.PAPER,
+                onClick = { onThemeSelected(ThemeMode.PAPER) },
+                primarySwatch = PaperScheme.primaryContainer,
+                backgroundSwatch = PaperScheme.background,
+                outlineSwatch = PaperScheme.primary
+            )
         }
     }
 }
@@ -103,6 +129,7 @@ private fun ThemeOptionCard(
     onClick: () -> Unit,
     primarySwatch: Color,
     backgroundSwatch: Color,
+    outlineSwatch: Color? = null,
     enabled: Boolean = true
 ) {
     Card(
@@ -127,7 +154,7 @@ private fun ThemeOptionCard(
                     .size(40.dp)
                     .clip(CircleShape)
                     .background(backgroundSwatch)
-                    .border(2.dp, primarySwatch, CircleShape),
+                    .border(2.dp, outlineSwatch ?: primarySwatch, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Box(

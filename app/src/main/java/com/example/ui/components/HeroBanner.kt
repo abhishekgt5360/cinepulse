@@ -48,7 +48,7 @@ import com.example.data.model.MovieItem
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import com.example.ui.theme.PureWhite
+import com.example.ui.theme.LocalHighContrast
 
 import kotlinx.coroutines.delay
 
@@ -198,7 +198,7 @@ private fun HeroBannerSlide(
             // Movie/Show Title
             Text(
                 text       = item.safeName,
-                color      = PureWhite,
+                color      = Color.White,
                 fontSize   = 26.sp,
                 fontWeight = FontWeight.ExtraBold,
                 maxLines   = 2,
@@ -230,7 +230,7 @@ private fun HeroBannerSlide(
                         Spacer(Modifier.width(3.dp))
                         Text(
                             text       = item.rating ?: "",
-                            color      = PureWhite,
+                            color      = Color.White,
                             fontSize   = 11.sp,
                             fontWeight = FontWeight.Bold
                         )

@@ -175,8 +175,11 @@ fun MainApp(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             if (!isInPipMode && !isDetailOpen && !isFullscreenPlaying) {
+                val isHighContrast = LocalHighContrast.current
                 NavigationBar(
-                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
+                    modifier = Modifier
+                        .then(if (isHighContrast) Modifier.border(BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)) else Modifier)
+                        .windowInsetsPadding(WindowInsets.navigationBars),
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ) {
                     NavigationBarItem(
