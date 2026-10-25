@@ -22,9 +22,11 @@ import com.example.data.local.WatchlistEntity
 import com.example.data.model.*
 import com.example.data.repository.MovieRepository
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.example.util.RegionalCategoryConfig
 
 import com.example.ui.theme.ThemeMode
 
@@ -223,14 +225,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             // Only show full loading indicator if we don't already have cached content
             if (_homeState.value.sections.isEmpty()) {
-                _homeState.update { it.copy(isLoading = true, errorMessage = null) }
-            }
-            repository.getHome()
-                .onSuccess { response ->
-                    val sections = response.sections.orEmpty()
-                    val bannerSection = sections.firstOrNull { it.section.equals("Banner", ignoreCase = true) }
+                val cachedHome = repository.getCachedHome()
+                val cachedBolly = repository.getCachedBollywood()
+                if (cachedHome != null || cachedBolly != null) {
+                    val bannerSection = cachedHome?.sections.orEmpty().firstOrNull { it.section.equals("Banner", ignoreCase = true) }
                     val bannerItems = bannerSection?.items.orEmpty()
-                    val otherSections = sections.filter { !it.section.equals("Banner", ignoreCase = true) && it.items.isNotEmpty() }
+                    val otherSections = cachedHome?.sections.orEmpty()
+                        .filter { !it.section.equals("Banner", ignoreCase = true) && !it.section.contains("Nollywood", ignoreCase = true) && it.items.isNotEmpty() }
+                        .toMutableList()
+
+                    if (cachedBolly != null && cachedBolly.items.isNotEmpty()) {
+                        otherSections.add(0, HomeSection(section = RegionalCategoryConfig.ROW_TITLE, count = cachedBolly.items.size, items = cachedBolly.items))
+                    }
+
                     _homeState.update {
                         it.copy(
                             isLoading = false,
@@ -239,17 +246,69 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             errorMessage = null
                         )
                     }
+                } else {
+                    _homeState.update { it.copy(isLoading = true, errorMessage = null) }
                 }
-                .onFailure { error ->
+            }
+
+            val homeDeferred = async { repository.getHome() }
+            val bollyDeferred = async { repository.getBollywoodMovies() }
+
+            val homeResult = homeDeferred.await()
+            val bollyResult = bollyDeferred.await()
+
+            homeResult.onSuccess { response ->
+                val sections = response.sections.orEmpty()
+                val bannerSection = sections.firstOrNull { it.section.equals("Banner", ignoreCase = true) }
+                val bannerItems = bannerSection?.items.orEmpty()
+                val otherSections = sections
+                    .filter { !it.section.equals("Banner", ignoreCase = true) && !it.section.contains("Nollywood", ignoreCase = true) && it.items.isNotEmpty() }
+                    .toMutableList()
+
+                val bollyItems = bollyResult.getOrNull()?.items.orEmpty()
+                if (bollyItems.isNotEmpty()) {
+                    otherSections.add(0, HomeSection(section = RegionalCategoryConfig.ROW_TITLE, count = bollyItems.size, items = bollyItems))
+                }
+
+                _homeState.update {
+                    it.copy(
+                        isLoading = false,
+                        bannerItems = bannerItems,
+                        sections = otherSections,
+                        errorMessage = null
+                    )
+                }
+            }.onFailure { error ->
+                val cachedHome = repository.getCachedHome()
+                val cachedBolly = repository.getCachedBollywood()
+                if (cachedHome != null) {
+                    val bannerSection = cachedHome.sections.orEmpty().firstOrNull { it.section.equals("Banner", ignoreCase = true) }
+                    val bannerItems = bannerSection?.items.orEmpty()
+                    val otherSections = cachedHome.sections.orEmpty()
+                        .filter { !it.section.equals("Banner", ignoreCase = true) && !it.section.contains("Nollywood", ignoreCase = true) && it.items.isNotEmpty() }
+                        .toMutableList()
+
+                    if (cachedBolly != null && cachedBolly.items.isNotEmpty()) {
+                        otherSections.add(0, HomeSection(section = RegionalCategoryConfig.ROW_TITLE, count = cachedBolly.items.size, items = cachedBolly.items))
+                    }
+
                     _homeState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = if (it.sections.isEmpty()) {
-                                error.localizedMessage ?: "Failed to load home feed. Please check your connection."
-                            } else null
+                            bannerItems = bannerItems,
+                            sections = otherSections,
+                            errorMessage = null
+                        )
+                    }
+                } else {
+                    _homeState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = error.localizedMessage ?: "Failed to load home feed. Please check your connection."
                         )
                     }
                 }
+            }
         }
     }
 
@@ -281,12 +340,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             if (!reset && !currentState.hasMore) return@launch
 
-            val genreParam = if (currentState.selectedGenre == "All") null else currentState.selectedGenre
+            val isBollywoodGenre = currentState.selectedGenre.equals(RegionalCategoryConfig.ROW_TITLE, ignoreCase = true)
+            val genreParam = if (currentState.selectedGenre == "All" || isBollywoodGenre) null else currentState.selectedGenre
+            val countryParam = if (isBollywoodGenre) RegionalCategoryConfig.COUNTRY_FILTER else null
             val sortParam = currentState.selectedSort
             val cacheKey = when (currentState.type) {
-                CatalogType.MOVIES -> "movies_${targetPage}_${sortParam}_${genreParam}"
-                CatalogType.TV_SERIES -> "tv_${targetPage}_${sortParam}_${genreParam}"
-                CatalogType.ANIMATION -> "anim_${targetPage}_${sortParam}_${genreParam}"
+                CatalogType.MOVIES -> "movies_${targetPage}_${sortParam}_${genreParam}_${countryParam}"
+                CatalogType.TV_SERIES -> "tv_${targetPage}_${sortParam}_${genreParam}_${countryParam}"
+                CatalogType.ANIMATION -> "anim_${targetPage}_${sortParam}_${genreParam}_${countryParam}"
             }
 
             // Immediately display cached catalog items if available on reset
@@ -309,9 +370,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             val result = when (currentState.type) {
-                CatalogType.MOVIES -> repository.getMovies(page = targetPage, sort = sortParam, genre = genreParam)
-                CatalogType.TV_SERIES -> repository.getTvSeries(page = targetPage, sort = sortParam, genre = genreParam)
-                CatalogType.ANIMATION -> repository.getAnimation(page = targetPage, sort = sortParam, genre = genreParam)
+                CatalogType.MOVIES -> repository.getMovies(page = targetPage, sort = sortParam, genre = genreParam, country = countryParam)
+                CatalogType.TV_SERIES -> repository.getTvSeries(page = targetPage, sort = sortParam, genre = genreParam, country = countryParam)
+                CatalogType.ANIMATION -> repository.getAnimation(page = targetPage, sort = sortParam, genre = genreParam, country = countryParam)
             }
 
             result.onSuccess { response ->

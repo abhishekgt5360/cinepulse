@@ -41,6 +41,7 @@ fun HomeScreen(
     onDeleteHistoryClick: (String) -> Unit,
     onRetry: () -> Unit,
     onSearchClick: () -> Unit = {},
+    onSeeAllClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // Loading state
@@ -210,25 +211,40 @@ fun HomeScreen(
             Column(modifier = Modifier.padding(top = 18.dp)) {
                 // Section heading with brand gradient accent
                 Row(
-                    modifier = Modifier.padding(horizontal = 18.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .width(3.dp)
-                            .height(18.dp)
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(
-                                Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer))
-                            )
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = section.section,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .width(3.dp)
+                                .height(18.dp)
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(
+                                    Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer))
+                                )
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = section.section,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    TextButton(
+                        onClick = { onSeeAllClick(section.section) }
+                    ) {
+                        Text(
+                            text = "See all",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(10.dp))

@@ -6,6 +6,7 @@ import com.example.data.local.WatchlistEntity
 import com.example.data.model.*
 import com.example.data.remote.MovieApiService
 import com.example.data.remote.NetworkClient
+import com.example.util.RegionalCategoryConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -17,8 +18,12 @@ class MovieRepository(
 ) {
     private val dao = database.watchDao()
     private val homeJsonAdapter by lazy { NetworkClient.moshi.adapter(HomeResponse::class.java) }
+    private val catalogJsonAdapter by lazy { NetworkClient.moshi.adapter(CatalogResponse::class.java) }
     private val cacheFile by lazy {
         context?.cacheDir?.resolve("cached_home_feed.json")
+    }
+    private val bollywoodCacheFile by lazy {
+        context?.cacheDir?.resolve("cached_bollywood_feed.json")
     }
 
     companion object {
@@ -66,11 +71,11 @@ class MovieRepository(
         return catalogCache[key]
     }
 
-    suspend fun getMovies(page: Int, sort: String?, genre: String?): Result<CatalogResponse> =
+    suspend fun getMovies(page: Int, sort: String?, genre: String?, country: String? = null): Result<CatalogResponse> =
         withContext(Dispatchers.IO) {
-            val cacheKey = "movies_${page}_${sort}_${genre}"
+            val cacheKey = "movies_${page}_${sort}_${genre}_${country}"
             try {
-                val response = api.getMovies(page = page, sort = sort, genre = genre)
+                val response = api.getMovies(page = page, sort = sort, genre = genre, country = country)
                 if (response.items.isNotEmpty()) {
                     catalogCache[cacheKey] = response
                 }
@@ -81,11 +86,90 @@ class MovieRepository(
             }
         }
 
-    suspend fun getTvSeries(page: Int, sort: String?, genre: String?): Result<CatalogResponse> =
+    fun getCachedBollywood(): CatalogResponse? {
+        try {
+            val file = bollywoodCacheFile
+            if (file != null && file.exists()) {
+                val json = file.readText()
+                val parsed = catalogJsonAdapter.fromJson(json)
+                if (parsed != null && parsed.items.isNotEmpty()) {
+                    return parsed
+                }
+            }
+        } catch (_: Exception) {}
+        return null
+    }
+
+    suspend fun getBollywoodMovies(page: Int = 1): Result<CatalogResponse> = withContext(Dispatchers.IO) {
+        try {
+            // Tier 1: Try country filter ("India")
+            var response = try {
+                api.getMovies(page = page, country = RegionalCategoryConfig.COUNTRY_FILTER)
+            } catch (_: Exception) {
+                CatalogResponse(items = emptyList())
+            }
+
+            // Tier 2: Try genre filter ("Bollywood") if Tier 1 returned no items
+            if (response.items.isEmpty()) {
+                response = try {
+                    api.getMovies(page = page, genre = RegionalCategoryConfig.ROW_TITLE)
+                } catch (_: Exception) {
+                    CatalogResponse(items = emptyList())
+                }
+            }
+
+            // Tier 3: Try search queries ("Hindi", "Bollywood", "Indian") if Tiers 1 & 2 returned no items
+            if (response.items.isEmpty()) {
+                val searchResults = mutableListOf<MovieItem>()
+                val seenSubjectIds = mutableSetOf<String>()
+
+                for (query in RegionalCategoryConfig.FALLBACK_QUERIES) {
+                    try {
+                        val searchRes = api.search(query = query, page = page)
+                        searchRes.items.forEach { item ->
+                            val id = item.subjectId.ifBlank { item.safeSlug }
+                            if (id.isNotBlank() && seenSubjectIds.add(id)) {
+                                searchResults.add(item)
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                if (searchResults.isNotEmpty()) {
+                    response = CatalogResponse(page = page, items = searchResults)
+                }
+            }
+
+            // Cache non-empty responses for offline instant loading
+            if (response.items.isNotEmpty()) {
+                try {
+                    bollywoodCacheFile?.writeText(catalogJsonAdapter.toJson(response))
+                } catch (_: Exception) {}
+                Result.success(response)
+            } else {
+                // Tier 4: Fall back to local disk cache if live network returned empty
+                val cached = getCachedBollywood()
+                if (cached != null) {
+                    Result.success(cached)
+                } else {
+                    Result.success(response)
+                }
+            }
+        } catch (e: Exception) {
+            val cached = getCachedBollywood()
+            if (cached != null) {
+                Result.success(cached)
+            } else {
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun getTvSeries(page: Int, sort: String?, genre: String?, country: String? = null): Result<CatalogResponse> =
         withContext(Dispatchers.IO) {
-            val cacheKey = "tv_${page}_${sort}_${genre}"
+            val cacheKey = "tv_${page}_${sort}_${genre}_${country}"
             try {
-                val response = api.getTvSeries(page = page, sort = sort, genre = genre)
+                val response = api.getTvSeries(page = page, sort = sort, genre = genre, country = country)
                 if (response.items.isNotEmpty()) {
                     catalogCache[cacheKey] = response
                 }
@@ -96,9 +180,9 @@ class MovieRepository(
             }
         }
 
-    suspend fun getAnimation(page: Int, sort: String?, genre: String?): Result<CatalogResponse> =
+    suspend fun getAnimation(page: Int, sort: String?, genre: String?, country: String? = null): Result<CatalogResponse> =
         withContext(Dispatchers.IO) {
-            val cacheKey = "anim_${page}_${sort}_${genre}"
+            val cacheKey = "anim_${page}_${sort}_${genre}_${country}"
             try {
                 val response = api.getAnimation(page = page, sort = sort, genre = genre)
                 if (response.items.isNotEmpty()) {

@@ -316,7 +316,13 @@ fun MainApp(
                                 viewModel.deleteHistory(subId)
                             },
                             onRetry = { viewModel.loadHomeFeed() },
-                            onSearchClick = { viewModel.selectTab(AppTab.SEARCH) }
+                            onSearchClick = { viewModel.selectTab(AppTab.SEARCH) },
+                            onSeeAllClick = { sectionName ->
+                                if (sectionName.equals(com.example.util.RegionalCategoryConfig.ROW_TITLE, ignoreCase = true)) {
+                                    viewModel.setCatalogGenre(com.example.util.RegionalCategoryConfig.ROW_TITLE)
+                                }
+                                viewModel.selectTab(AppTab.CATALOG)
+                            }
                         )
                     }
 

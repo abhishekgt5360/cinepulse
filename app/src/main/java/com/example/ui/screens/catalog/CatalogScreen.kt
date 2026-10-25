@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.MovieItem
 import com.example.ui.CatalogType
 import com.example.ui.CatalogUiState
+import com.example.util.RegionalCategoryConfig
 import com.example.ui.components.GlassChip
 import com.example.ui.components.MoviePosterCard
 import com.example.ui.theme.LocalHighContrast
@@ -35,7 +36,7 @@ import com.example.ui.theme.selectableColors
 
 
 private val GENRES = listOf(
-    "All", "Action", "Drama", "Comedy", "Sci-Fi", "Horror",
+    "All", RegionalCategoryConfig.ROW_TITLE, "Action", "Drama", "Comedy", "Sci-Fi", "Horror",
     "Thriller", "Adventure", "Romance", "Fantasy", "Crime", "Mystery", "Animation"
 )
 
