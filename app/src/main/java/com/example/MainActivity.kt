@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -178,32 +180,51 @@ fun MainApp(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ) {
                     NavigationBarItem(
-                        selected = currentTab == AppTab.HOME,
-                        onClick = { viewModel.selectTab(AppTab.HOME) },
-                        icon = { Icon(if (currentTab == AppTab.HOME) Icons.Filled.Home else Icons.Outlined.Home, contentDescription = "Home") },
+                        selected = !showAppearanceScreen && currentTab == AppTab.HOME,
+                        onClick = {
+                            showAppearanceScreen = false
+                            viewModel.selectTab(AppTab.HOME)
+                        },
+                        icon = { Icon(if (!showAppearanceScreen && currentTab == AppTab.HOME) Icons.Filled.Home else Icons.Outlined.Home, contentDescription = "Home") },
                         label = { Text("Home") },
                         modifier = Modifier.testTag("nav_home")
                     )
                     NavigationBarItem(
-                        selected = currentTab == AppTab.CATALOG,
-                        onClick = { viewModel.selectTab(AppTab.CATALOG) },
-                        icon = { Icon(if (currentTab == AppTab.CATALOG) Icons.Filled.Explore else Icons.Outlined.Explore, contentDescription = "Browse") },
+                        selected = !showAppearanceScreen && currentTab == AppTab.CATALOG,
+                        onClick = {
+                            showAppearanceScreen = false
+                            viewModel.selectTab(AppTab.CATALOG)
+                        },
+                        icon = { Icon(if (!showAppearanceScreen && currentTab == AppTab.CATALOG) Icons.Filled.Explore else Icons.Outlined.Explore, contentDescription = "Browse") },
                         label = { Text("Browse") },
                         modifier = Modifier.testTag("nav_browse")
                     )
                     NavigationBarItem(
-                        selected = currentTab == AppTab.SEARCH,
-                        onClick = { viewModel.selectTab(AppTab.SEARCH) },
+                        selected = !showAppearanceScreen && currentTab == AppTab.SEARCH,
+                        onClick = {
+                            showAppearanceScreen = false
+                            viewModel.selectTab(AppTab.SEARCH)
+                        },
                         icon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
                         label = { Text("Search") },
                         modifier = Modifier.testTag("nav_search")
                     )
                     NavigationBarItem(
-                        selected = currentTab == AppTab.LIBRARY,
-                        onClick = { viewModel.selectTab(AppTab.LIBRARY) },
-                        icon = { Icon(if (currentTab == AppTab.LIBRARY) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, contentDescription = "Library") },
+                        selected = !showAppearanceScreen && currentTab == AppTab.LIBRARY,
+                        onClick = {
+                            showAppearanceScreen = false
+                            viewModel.selectTab(AppTab.LIBRARY)
+                        },
+                        icon = { Icon(if (!showAppearanceScreen && currentTab == AppTab.LIBRARY) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, contentDescription = "Library") },
                         label = { Text("Library") },
                         modifier = Modifier.testTag("nav_library")
+                    )
+                    NavigationBarItem(
+                        selected = showAppearanceScreen,
+                        onClick = { showAppearanceScreen = true },
+                        icon = { Icon(if (showAppearanceScreen) Icons.Filled.Settings else Icons.Outlined.Settings, contentDescription = "Settings") },
+                        label = { Text("Settings") },
+                        modifier = Modifier.testTag("nav_settings")
                     )
                 }
             }
