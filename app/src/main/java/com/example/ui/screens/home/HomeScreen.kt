@@ -134,54 +134,21 @@ fun HomeScreen(
             }
 
             // ── Continue Watching ────────────────────────────────────────────
-            if (watchHistory.isNotEmpty()) {
-                item {
-                    Column(modifier = Modifier.padding(top = 20.dp)) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 18.dp)
-                                .clickable { onSeeAllClick("History") },
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayCircleOutline,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = "Continue Watching",
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = "See All History",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 18.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            items(watchHistory, key = { it.subjectId }) { historyItem ->
-                                ContinueWatchingCard(
-                                    history = historyItem,
-                                    onPlayClick = { onResumeHistoryClick(historyItem) },
-                                    onDeleteClick = { onDeleteHistoryClick(historyItem.subjectId) }
-                                )
-                            }
-                        }
-                    }
-                }
+            item {
+                ContinueWatchingSection(
+                    items = watchHistory,
+                    onResumeClick = onResumeHistoryClick,
+                    onDeleteClick = onDeleteHistoryClick,
+                    onOpenDetailsClick = {
+                        onMovieClick(MovieItem(
+                            name = it.title,
+                            posterUrl = it.posterUrl,
+                            slug = it.slug,
+                            subjectId = it.subjectId
+                        ))
+                    },
+                    onSeeAllClick = { onSeeAllClick("History") }
+                )
             }
 
             // ── Content Sections ─────────────────────────────────────────────

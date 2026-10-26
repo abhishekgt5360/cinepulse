@@ -2,6 +2,7 @@ package com.example.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -14,11 +15,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
 enum class ThemeMode { CRIMSON, OLED, DYNAMIC, HIGH_CONTRAST, PAPER }
 
 val LocalHighContrast = staticCompositionLocalOf { false }
+val LocalCardBorder = staticCompositionLocalOf<BorderStroke?> { null }
 
 data class SelectableColors(
     val container: Color,
@@ -272,8 +275,12 @@ fun CinePulseTheme(
         }
     }
 
+    val isHighContrast = mode == ThemeMode.HIGH_CONTRAST
+    val cardBorder = if (isHighContrast) BorderStroke(1.5.dp, colorScheme.outline) else BorderStroke(0.5.dp, colorScheme.outlineVariant)
+
     CompositionLocalProvider(
-        LocalHighContrast provides (mode == ThemeMode.HIGH_CONTRAST),
+        LocalHighContrast provides isHighContrast,
+        LocalCardBorder provides cardBorder,
         LocalContentColor provides colorScheme.onBackground
     ) {
         MaterialTheme(

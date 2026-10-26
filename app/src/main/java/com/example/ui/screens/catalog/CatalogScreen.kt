@@ -194,7 +194,7 @@ fun CatalogScreen(
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 availablePresets.forEach { preset ->
                     val isSelected = uiState.selectedRegion.equals(preset.label, ignoreCase = true)
@@ -215,7 +215,7 @@ fun CatalogScreen(
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 SORTS.forEach { (sortKey, label) ->
                     val isSelected = uiState.selectedSort == sortKey
@@ -237,7 +237,7 @@ fun CatalogScreen(
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     GENRES.forEach { genre ->
                         val isSelected = uiState.selectedGenre == genre
