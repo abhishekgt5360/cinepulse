@@ -54,8 +54,6 @@ object OverImageStyle {
             Color.Black.copy(alpha = 0.85f)  // legibility-ok: continue watching scrim
         )
     )
-    val PlayButtonColor = Color.White.copy(alpha = 0.92f) // legibility-ok: play button
-    val PlayIconColor = Color.Black // legibility-ok: play button
     val MenuButtonBg = Color.Black.copy(alpha = 0.35f) // legibility-ok: menu button background
     val PrimaryText = Color.White // legibility-ok: primary text over scrim
     val SecondaryText = Color.White.copy(alpha = 0.85f) // legibility-ok: secondary text over scrim
@@ -307,20 +305,21 @@ fun ContinueWatchingCard(
             }
         }
 
-        // Center Play Button
+        // Center Play Button - ensure icon is legible by using onPrimary variant that contrasts against primary background
         Box(
             modifier = Modifier
                 .size(52.dp)
                 .align(Alignment.Center)
                 .clip(CircleShape)
-                .background(OverImageStyle.PlayButtonColor)
+                .background(MaterialTheme.colorScheme.primary)
                 .clickable { onPlayClick() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.PlayArrow,
                 contentDescription = null,
-                tint = OverImageStyle.PlayIconColor,
+                // Use onPrimary for contrast against the primary circle background
+                tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(32.dp)
             )
         }

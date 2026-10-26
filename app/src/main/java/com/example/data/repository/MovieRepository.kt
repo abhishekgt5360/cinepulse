@@ -48,6 +48,49 @@ class MovieRepository(
     companion object {
         @Volatile private var inMemoryHome: HomeResponse? = null
         private val catalogCache = java.util.concurrent.ConcurrentHashMap<String, CatalogResponse>()
+
+        /**
+         * Single source of truth for catalog cache keys so the ViewModel can look up
+         * exactly what [getRegionCatalog] stored.
+         */
+        fun catalogCacheKey(
+            type: com.example.ui.CatalogType,
+            page: Int,
+            sort: String?,
+            genre: String?,
+            country: String?,
+            year: String?
+        ): String = buildString {
+            append(type.name.lowercase())
+            append("_page=").append(page)
+            append("_sort=").append(sort ?: "-")
+            append("_genre=").append(genre ?: "-")
+            append("_country=").append(country ?: "-")
+            append("_year=").append(year ?: "-")
+        }
+
+        /**
+         * Cache key for the final, user-visible preset result. Single-country presets
+         * delegate to [catalogCacheKey] so they line up with [getRegionCatalog]'s cache,
+         * while multi-country presets cache their merged (interleaved) result.
+         */
+        fun presetCacheKey(
+            preset: CatalogPreset,
+            type: com.example.ui.CatalogType,
+            page: Int,
+            sort: String?,
+            genre: String?,
+            year: String?
+        ): String {
+            val effectiveGenre = preset.genre ?: genre
+            val effectiveYear = if (type == com.example.ui.CatalogType.ANIMATION) null else year
+            val countryToken = if (preset.countries.isEmpty()) {
+                preset.country
+            } else {
+                "preset=" + preset.id
+            }
+            return catalogCacheKey(type, page, sort, effectiveGenre, countryToken, effectiveYear)
+        }
     }
 
     fun getCachedHome(): HomeResponse? {
@@ -109,20 +152,26 @@ class MovieRepository(
         country: String? = null,
         genre: String? = null,
         sort: String? = null,
+        year: String? = null,
         page: Int = 1
     ): Result<CatalogResponse> = withContext(Dispatchers.IO) {
-        val cacheKey = "${type.name.lowercase()}_${page}_${sort}_${genre}_${country}"
+        // Animation has no country/year parameters on the API.
+        val effectiveCountry = if (type == com.example.ui.CatalogType.ANIMATION) null else country
+        val effectiveYear = if (type == com.example.ui.CatalogType.ANIMATION) null else year
+        val cacheKey = catalogCacheKey(type, page, sort, genre, effectiveCountry, effectiveYear)
         try {
             val response = when (type) {
-                com.example.ui.CatalogType.MOVIES -> api.getMovies(page = page, sort = sort, genre = genre, country = country)
-                com.example.ui.CatalogType.TV_SERIES -> api.getTvSeries(page = page, sort = sort, genre = genre, country = country)
+                com.example.ui.CatalogType.MOVIES -> api.getMovies(page = page, sort = sort, genre = genre, country = effectiveCountry, year = effectiveYear)
+                com.example.ui.CatalogType.TV_SERIES -> api.getTvSeries(page = page, sort = sort, genre = genre, country = effectiveCountry, year = effectiveYear)
                 com.example.ui.CatalogType.ANIMATION -> api.getAnimation(page = page, sort = sort, genre = genre)
             }
 
             if (response.items.isNotEmpty()) {
                 catalogCache[cacheKey] = response
-                // Write cached_bollywood_feed.json ONLY for page 1, country != null, and unfiltered by genre/sort
-                if (page == 1 && country != null && genre == null && sort == null && type == com.example.ui.CatalogType.MOVIES) {
+                // Write cached_bollywood_feed.json ONLY for the unfiltered India movies feed.
+                if (page == 1 && effectiveCountry != null && genre == null && sort == null &&
+                    effectiveYear == null && type == com.example.ui.CatalogType.MOVIES
+                ) {
                     writeCacheAtomically(bollywoodCacheFile, catalogJsonAdapter.toJson(response))
                 }
             }
@@ -130,7 +179,9 @@ class MovieRepository(
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             catalogCache[cacheKey]?.let { return@withContext Result.success(it) }
-            if (page == 1 && country != null && genre == null && sort == null && type == com.example.ui.CatalogType.MOVIES) {
+            if (page == 1 && effectiveCountry != null && genre == null && sort == null &&
+                effectiveYear == null && type == com.example.ui.CatalogType.MOVIES
+            ) {
                 val cached = getCachedBollywood()
                 if (cached != null) {
                     return@withContext Result.success(cached)
@@ -140,11 +191,23 @@ class MovieRepository(
         }
     }
 
-    suspend fun getMovies(page: Int, sort: String?, genre: String?, country: String? = null): Result<CatalogResponse> =
-        getRegionCatalog(type = com.example.ui.CatalogType.MOVIES, country = country, genre = genre, sort = sort, page = page)
+    suspend fun getMovies(
+        page: Int,
+        sort: String?,
+        genre: String?,
+        country: String? = null,
+        year: String? = null
+    ): Result<CatalogResponse> =
+        getRegionCatalog(type = com.example.ui.CatalogType.MOVIES, country = country, genre = genre, sort = sort, year = year, page = page)
 
-    suspend fun getTvSeries(page: Int, sort: String?, genre: String?, country: String? = null): Result<CatalogResponse> =
-        getRegionCatalog(type = com.example.ui.CatalogType.TV_SERIES, country = country, genre = genre, sort = sort, page = page)
+    suspend fun getTvSeries(
+        page: Int,
+        sort: String?,
+        genre: String?,
+        country: String? = null,
+        year: String? = null
+    ): Result<CatalogResponse> =
+        getRegionCatalog(type = com.example.ui.CatalogType.TV_SERIES, country = country, genre = genre, sort = sort, year = year, page = page)
 
     suspend fun getAnimation(page: Int, sort: String?, genre: String?): Result<CatalogResponse> =
         getRegionCatalog(type = com.example.ui.CatalogType.ANIMATION, genre = genre, sort = sort, page = page)
@@ -157,8 +220,10 @@ class MovieRepository(
         type: com.example.ui.CatalogType = com.example.ui.CatalogType.MOVIES,
         genre: String? = null,
         sort: String? = null,
+        year: String? = null,
         page: Int = 1
     ): Result<CatalogResponse> = withContext(Dispatchers.IO) {
+        val presetKey = presetCacheKey(preset, type, page, sort, genre, year)
         if (preset.countries.isNotEmpty()) {
             try {
                 val countryResponses = coroutineScope {
@@ -169,6 +234,7 @@ class MovieRepository(
                                 country = countryName,
                                 genre = preset.genre ?: genre,
                                 sort = sort,
+                                year = year,
                                 page = page
                             ).getOrNull()
                         }
@@ -176,6 +242,7 @@ class MovieRepository(
                 }
 
                 if (countryResponses.isEmpty()) {
+                    catalogCache[presetKey]?.let { return@withContext Result.success(it) }
                     return@withContext Result.failure(java.io.IOException("Failed to load multi-country catalog"))
                 }
 
@@ -197,9 +264,14 @@ class MovieRepository(
                 }
 
                 val hasMore = countryResponses.any { it.hasMore == true }
-                Result.success(CatalogResponse(page = page, hasMore = hasMore, items = interleaved))
+                val merged = CatalogResponse(page = page, hasMore = hasMore, items = interleaved)
+                if (interleaved.isNotEmpty()) {
+                    catalogCache[presetKey] = merged
+                }
+                Result.success(merged)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
+                catalogCache[presetKey]?.let { return@withContext Result.success(it) }
                 Result.failure(e)
             }
         } else {
@@ -208,6 +280,7 @@ class MovieRepository(
                 country = preset.country,
                 genre = preset.genre ?: genre,
                 sort = sort,
+                year = year,
                 page = page
             )
         }

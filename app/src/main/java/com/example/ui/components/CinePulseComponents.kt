@@ -3,6 +3,7 @@ package com.example.ui.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -236,7 +237,10 @@ fun GlassChip(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
+    trailingIcon: ImageVector? = null,
+    trailingIconContentDescription: String? = null,
+    onTrailingIconClick: (() -> Unit)? = null
 ) {
     val isHighContrast = LocalHighContrast.current
     val selColors = selectableColors(selected)
@@ -268,11 +272,29 @@ fun GlassChip(
                 )
             }
         },
+        trailingIcon = trailingIcon?.let { vector ->
+            {
+                Icon(
+                    imageVector = vector,
+                    contentDescription = trailingIconContentDescription,
+                    modifier = Modifier
+                        .size(16.dp)
+                        .then(
+                            if (onTrailingIconClick != null) {
+                                Modifier.clickable(onClick = onTrailingIconClick)
+                            } else {
+                                Modifier
+                            }
+                        )
+                )
+            }
+        },
         border = BorderStroke(borderWidth, selColors.border),
         colors = FilterChipDefaults.filterChipColors(
             selectedContainerColor = selColors.container,
             selectedLabelColor = selColors.content,
             selectedLeadingIconColor = selColors.content,
+            selectedTrailingIconColor = selColors.content,
             containerColor = selColors.container,
             labelColor = selColors.secondaryContent,
             iconColor = selColors.secondaryContent
@@ -416,6 +438,28 @@ fun PosterImage(
 
                 // Default/Portrait or Wide with title below: Fill/Fit centered on surfaceContainerHighest
                 else -> {
+                    // When the artwork does not match the frame, fill the leftover space with a
+                    // dimmed copy of the same artwork instead of showing empty bands.
+                    val currentRatio = detectedRatio
+                    if (currentRatio != null && kotlin.math.abs(currentRatio - aspectRatio) > 0.05f) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(imageUrl)
+                                .size(32, 32)
+                                .scale(Scale.FILL)
+                                .crossfade(200)
+                                .build(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.55f)) // legibility-ok: poster ambient backdrop
+                        )
+                    }
+
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(imageUrl)

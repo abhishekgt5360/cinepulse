@@ -57,7 +57,8 @@ data class HomeUiState(
 
 data class CatalogUiState(
     val type: CatalogType = CatalogType.MOVIES,
-    val selectedRegion: String = "All",
+    val selectedPresetId: String = RegionalCategoryConfig.PRESET_ALL,
+    val selectedYear: String? = null,
     val selectedGenre: String = "All",
     val selectedSort: String = "foryou",
     val items: List<MovieItem> = emptyList(),
@@ -119,8 +120,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putBoolean("adult_enabled", enabled).apply()
         _isAdultEnabled.value = enabled
 
-        if (!enabled && _catalogState.value.selectedRegion == RegionalCategoryConfig.ADULT_LABEL) {
-            setCatalogRegion("All")
+        if (!enabled && _catalogState.value.selectedPresetId == RegionalCategoryConfig.PRESET_ADULT) {
+            setCatalogPreset(RegionalCategoryConfig.PRESET_ALL)
         }
         loadHomeFeed()
     }
@@ -165,6 +166,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _searchState = MutableStateFlow(SearchUiState())
     val searchState: StateFlow<SearchUiState> = _searchState.asStateFlow()
     private var searchJob: Job? = null
+    private var catalogJob: Job? = null
+    private var catalogJobIsReset = false
 
     // Detail & Player state
     private val _detailPlayerState = MutableStateFlow(DetailPlayerUiState())
@@ -347,18 +350,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setCatalogType(type: CatalogType) {
         if (_catalogState.value.type != type) {
-            _catalogState.update { it.copy(type = type, page = 1) }
+            val isAnimation = type == CatalogType.ANIMATION
+            _catalogState.update {
+                it.copy(
+                    type = type,
+                    // Animation has no country/year controls, so never carry them in.
+                    selectedPresetId = if (isAnimation) RegionalCategoryConfig.PRESET_ALL else it.selectedPresetId,
+                    selectedYear = if (isAnimation) null else it.selectedYear,
+                    page = 1
+                )
+            }
             loadCatalog(reset = true)
         }
     }
 
-    fun setCatalogRegion(region: String) {
-        val preset = RegionalCategoryConfig.PRESETS.firstOrNull { it.label.equals(region, ignoreCase = true) }
-        if (preset != null && preset.requiresAdultOptIn && !_isAdultEnabled.value) {
-            return
+    fun setCatalogPreset(presetId: String) {
+        val preset = RegionalCategoryConfig.PRESETS.firstOrNull { it.id == presetId } ?: return
+        if (preset.requiresAdultOptIn && !_isAdultEnabled.value) return
+        if (_catalogState.value.selectedPresetId != presetId) {
+            _catalogState.update { it.copy(selectedPresetId = presetId, page = 1) }
+            loadCatalog(reset = true)
         }
-        if (_catalogState.value.selectedRegion != region) {
-            _catalogState.update { it.copy(selectedRegion = region, page = 1) }
+    }
+
+    fun setCatalogYear(year: String?) {
+        if (_catalogState.value.selectedYear != year) {
+            _catalogState.update { it.copy(selectedYear = year, page = 1) }
             loadCatalog(reset = true)
         }
     }
@@ -380,7 +397,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun resetCatalogFilters() {
         _catalogState.update {
             it.copy(
-                selectedRegion = "All",
+                selectedPresetId = RegionalCategoryConfig.PRESET_ALL,
+                selectedYear = null,
                 selectedGenre = "All",
                 selectedSort = "foryou",
                 page = 1
@@ -389,56 +407,115 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadCatalog(reset = true)
     }
 
+    /**
+     * Opens the catalog on [presetId] with a clean filter state. Used by Home "See all"
+     * rows so a previous year/genre/sort selection never leaks into the destination list.
+     */
+    fun openCatalogPreset(presetId: String, type: CatalogType = CatalogType.MOVIES) {
+        val preset = RegionalCategoryConfig.PRESETS.firstOrNull { it.id == presetId } ?: return
+        if (preset.requiresAdultOptIn && !_isAdultEnabled.value) return
+
+        val isAnimation = type == CatalogType.ANIMATION
+        _catalogState.update {
+            it.copy(
+                type = type,
+                selectedPresetId = if (isAnimation) RegionalCategoryConfig.PRESET_ALL else presetId,
+                selectedYear = null,
+                selectedGenre = "All",
+                selectedSort = "foryou",
+                page = 1
+            )
+        }
+        loadCatalog(reset = true)
+    }
+
+    private fun catalogRequestSignature(state: CatalogUiState): String {
+        val preset = RegionalCategoryConfig.presetById(state.selectedPresetId)
+        val genre = preset.genre ?: state.selectedGenre.takeUnless { it == "All" }
+        val year = if (state.type == CatalogType.ANIMATION) null else state.selectedYear
+        return "${state.type.name}|${preset.id}|$genre|${state.selectedSort}|$year"
+    }
+
     fun loadCatalog(reset: Boolean = false) {
-        viewModelScope.launch {
-            val currentState = _catalogState.value
-            val targetPage = if (reset) 1 else currentState.page + 1
+        val snapshot = _catalogState.value
+        if (!reset && (snapshot.isLoading || !snapshot.hasMore)) return
+        // Never let auto-pagination cancel a reset that is still in flight.
+        if (!reset && catalogJob?.isActive == true && catalogJobIsReset) return
 
-            if (!reset && !currentState.hasMore) return@launch
+        catalogJob?.cancel()
 
-            val preset = RegionalCategoryConfig.PRESETS.firstOrNull { it.label.equals(currentState.selectedRegion, ignoreCase = true) }
-                ?: RegionalCategoryConfig.PRESETS.first()
+        val targetPage = if (reset) 1 else snapshot.page + 1
+        val preset = RegionalCategoryConfig.presetById(snapshot.selectedPresetId)
+        val isAnimation = snapshot.type == CatalogType.ANIMATION
+        val yearParam = if (isAnimation) null else snapshot.selectedYear
+        val genreParam = preset.genre ?: snapshot.selectedGenre.takeUnless { it == "All" }
+        val sortParam = snapshot.selectedSort
+        val requestSignature = catalogRequestSignature(snapshot)
+        val cacheKey = MovieRepository.presetCacheKey(
+            preset = preset,
+            type = snapshot.type,
+            page = targetPage,
+            sort = sortParam,
+            genre = genreParam,
+            year = yearParam
+        )
 
-            val countryParam = preset.country
-            val genreParam = if (preset.genre != null) preset.genre else if (currentState.selectedGenre == "All") null else currentState.selectedGenre
-            val sortParam = currentState.selectedSort
-            val cacheKey = "${currentState.type.name.lowercase()}_${targetPage}_${sortParam}_${genreParam}_${countryParam}_${preset.id}"
-
-            // Immediately display cached catalog items if available on reset
-            if (reset) {
-                val cached = repository.getCachedCatalog(cacheKey)
-                if (cached != null && cached.items.isNotEmpty()) {
-                    _catalogState.update {
-                        it.copy(
-                            items = cached.items,
-                            isLoading = false,
-                            page = 1,
-                            hasMore = cached.hasMore ?: true
-                        )
-                    }
-                } else if (currentState.items.isEmpty()) {
-                    _catalogState.update { it.copy(isLoading = true, errorMessage = null) }
+        // Immediately display cached catalog items if available on reset.
+        if (reset) {
+            val cached = repository.getCachedCatalog(cacheKey)
+            if (cached != null && cached.items.isNotEmpty()) {
+                _catalogState.update {
+                    it.copy(
+                        items = cached.items,
+                        isLoading = false,
+                        page = 1,
+                        hasMore = cached.hasMore ?: true,
+                        errorMessage = null
+                    )
                 }
             } else {
-                _catalogState.update { it.copy(isLoading = true, errorMessage = null) }
+                // Clear the previous filter's results rather than showing stale titles.
+                _catalogState.update {
+                    it.copy(
+                        items = emptyList(),
+                        isLoading = true,
+                        page = 1,
+                        hasMore = true,
+                        errorMessage = null
+                    )
+                }
             }
+        } else {
+            _catalogState.update { it.copy(isLoading = true, errorMessage = null) }
+        }
 
+        catalogJobIsReset = reset
+        catalogJob = viewModelScope.launch {
             val result = repository.getPresetCatalog(
                 preset = preset,
-                type = currentState.type,
+                type = snapshot.type,
                 genre = genreParam,
                 sort = sortParam,
+                year = yearParam,
                 page = targetPage
             )
 
+            // A newer filter state owns the screen now; drop this response.
+            if (catalogRequestSignature(_catalogState.value) != requestSignature) return@launch
+
             result.onSuccess { response ->
-                val newItems = if (reset) response.items else currentState.items + response.items
+                val newItems = if (reset) {
+                    response.items
+                } else {
+                    (_catalogState.value.items + response.items)
+                        .distinctBy { "${it.safeSlug}_${it.subjectId}" }
+                }
                 _catalogState.update {
                     it.copy(
                         isLoading = false,
                         items = newItems,
                         page = targetPage,
-                        hasMore = response.hasMore ?: (response.items.isNotEmpty()),
+                        hasMore = response.hasMore ?: response.items.isNotEmpty(),
                         errorMessage = null
                     )
                 }

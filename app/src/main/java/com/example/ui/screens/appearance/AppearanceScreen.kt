@@ -1,6 +1,7 @@
 package com.example.ui.screens.appearance
 
 import android.os.Build
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.ui.theme.HighContrastScheme
 import com.example.ui.theme.OledScheme
@@ -42,8 +44,7 @@ fun AppearanceScreen(
     onThemeSelected: (ThemeMode) -> Unit,
     onBackClick: () -> Unit,
     isAdultEnabled: Boolean = false,
-    onAdultToggle: (Boolean) -> Unit = {},
-    onOpenThemeQa: (() -> Unit)? = null
+    onAdultToggle: (Boolean) -> Unit = {}
 ) {
     var showAdultConfirmDialog by remember { mutableStateOf(false) }
     var expandedThemeDropdown by remember { mutableStateOf(false) }
@@ -51,7 +52,7 @@ fun AppearanceScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Appearance", fontWeight = FontWeight.Bold) },
+                title = { Text("Settings", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -72,63 +73,81 @@ fun AppearanceScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "Choose theme",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            ExposedDropdownMenuBox(
-                expanded = expandedThemeDropdown,
-                onExpandedChange = { expandedThemeDropdown = it },
-                modifier = Modifier.fillMaxWidth()
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
             ) {
-                OutlinedTextField(
-                    value = currentThemeMode.getDisplayName(),
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedThemeDropdown) },
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                    ),
+                Row(
                     modifier = Modifier
-                        .menuAnchor()
                         .fillMaxWidth()
-                )
-                ExposedDropdownMenu(
-                    expanded = expandedThemeDropdown,
-                    onDismissRequest = { expandedThemeDropdown = false },
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ThemeMode.entries.forEach { mode ->
-                        val isSupported = mode != ThemeMode.DYNAMIC || isDynamicSupported
-                        if (isSupported) {
-                            DropdownMenuItem(
-                                text = { Text(mode.getDisplayName(), color = MaterialTheme.colorScheme.onSurface) },
-                                onClick = {
-                                    onThemeSelected(mode)
-                                    expandedThemeDropdown = false
-                                },
-                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                            )
+                    Text(
+                        text = "Choose theme",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    ExposedDropdownMenuBox(
+                        expanded = expandedThemeDropdown,
+                        onExpandedChange = { expandedThemeDropdown = it },
+                        modifier = Modifier.width(160.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            modifier = Modifier
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                                .fillMaxWidth()
+                                .height(40.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = currentThemeMode.getDisplayName(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedThemeDropdown)
+                            }
+                        }
+                        ExposedDropdownMenu(
+                            expanded = expandedThemeDropdown,
+                            onDismissRequest = { expandedThemeDropdown = false },
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ) {
+                            ThemeMode.entries.forEach { mode ->
+                                val isSupported = mode != ThemeMode.DYNAMIC || isDynamicSupported
+                                if (isSupported) {
+                                    DropdownMenuItem(
+                                        text = { Text(mode.getDisplayName(), color = MaterialTheme.colorScheme.onSurface) },
+                                        onClick = {
+                                            onThemeSelected(mode)
+                                            expandedThemeDropdown = false
+                                        },
+                                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text(
-                text = "Content Settings",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             Card(
                 shape = RoundedCornerShape(12.dp),
@@ -173,15 +192,6 @@ fun AppearanceScreen(
                 }
             }
 
-            if (onOpenThemeQa != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedButton(
-                    onClick = onOpenThemeQa,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Launch Theme QA Inspector", fontWeight = FontWeight.Bold)
-                }
-            }
         }
     }
 

@@ -12,10 +12,14 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,11 +52,19 @@ private val SORTS = listOf(
     "rating"  to "Top Rated"
 )
 
+private data class ActiveFilterChip(
+    val key: String,
+    val label: String,
+    val onRemove: () -> Unit
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CatalogScreen(
     uiState: CatalogUiState,
     onTypeSelected: (CatalogType) -> Unit,
-    onRegionSelected: (String) -> Unit,
+    onPresetSelected: (String) -> Unit,
+    onYearSelected: (String?) -> Unit,
     onGenreSelected: (String) -> Unit,
     onSortSelected: (String) -> Unit,
     onMovieClick: (MovieItem) -> Unit,
@@ -64,10 +76,51 @@ fun CatalogScreen(
 ) {
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
-    val availablePresets = remember(isAdultEnabled) {
-        RegionalCategoryConfig.PRESETS.filter { !it.requiresAdultOptIn || isAdultEnabled }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
+
+    val selectedPreset = RegionalCategoryConfig.presetById(uiState.selectedPresetId)
+    val isAnimation = uiState.type == CatalogType.ANIMATION
+    val isAdultPreset = selectedPreset.id == RegionalCategoryConfig.PRESET_ADULT
+    val isHighContrast = LocalHighContrast.current
+
+    fun applyFilter(block: () -> Unit) {
+        block()
+        coroutineScope.launch { gridState.scrollToItem(0) }
     }
-    val isAdultPresetSelected = uiState.selectedRegion.equals(RegionalCategoryConfig.ADULT_LABEL, ignoreCase = true)
+
+    val sortLabel = SORTS.firstOrNull { it.first == uiState.selectedSort }?.second
+        ?: uiState.selectedSort
+    val activeFilters: List<ActiveFilterChip> = buildList {
+        if (selectedPreset.id != RegionalCategoryConfig.PRESET_ALL) {
+            add(
+                ActiveFilterChip(key = "preset", label = selectedPreset.label) {
+                    applyFilter { onPresetSelected(RegionalCategoryConfig.PRESET_ALL) }
+                }
+            )
+        }
+        if (!isAnimation && uiState.selectedYear != null) {
+            add(
+                ActiveFilterChip(key = "year", label = uiState.selectedYear) {
+                    applyFilter { onYearSelected(null) }
+                }
+            )
+        }
+        if (selectedPreset.genre == null && uiState.selectedGenre != "All") {
+            add(
+                ActiveFilterChip(key = "genre", label = uiState.selectedGenre) {
+                    applyFilter { onGenreSelected("All") }
+                }
+            )
+        }
+        if (uiState.selectedSort != "foryou") {
+            add(
+                ActiveFilterChip(key = "sort", label = sortLabel) {
+                    applyFilter { onSortSelected("foryou") }
+                }
+            )
+        }
+    }
 
     // Load more when reaching bottom of catalog grid
     val shouldLoadMore by remember {
@@ -118,7 +171,6 @@ fun CatalogScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // ── Segmented Switcher: Movies | TV Series | Animation ──
-                val isHighContrast = LocalHighContrast.current
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -182,72 +234,59 @@ fun CatalogScreen(
             }
         }
 
-        // ── Region, Sort & Genre filter chips ─────────────────────────────────
+        // ── Filter bar: open sheet + removable active filters ─────────────────
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 6.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Region chips
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                availablePresets.forEach { preset ->
-                    val isSelected = uiState.selectedRegion.equals(preset.label, ignoreCase = true)
-                    GlassChip(
-                        label = preset.label,
-                        selected = isSelected,
-                        onClick = {
-                            onRegionSelected(preset.label)
-                            coroutineScope.launch { gridState.scrollToItem(0) }
-                        }
-                    )
+                GlassChip(
+                    label = "Filters",
+                    selected = false,
+                    icon = Icons.Default.FilterList,
+                    onClick = { showFilterSheet = true },
+                    modifier = Modifier.testTag("open_filters")
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                if (activeFilters.isNotEmpty()) {
+                    TextButton(
+                        onClick = { applyFilter(onResetFilters) },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "Reset",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             }
 
-            // Sort chips
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                SORTS.forEach { (sortKey, label) ->
-                    val isSelected = uiState.selectedSort == sortKey
-                    GlassChip(
-                        label = label,
-                        selected = isSelected,
-                        onClick = {
-                            onSortSelected(sortKey)
-                            coroutineScope.launch { gridState.scrollToItem(0) }
-                        }
-                    )
-                }
-            }
-
-            // Genre chips (Hidden when Adult preset is selected)
-            if (!isAdultPresetSelected) {
+            if (activeFilters.isNotEmpty()) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                        .horizontalScroll(rememberScrollState()),
+                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    GENRES.forEach { genre ->
-                        val isSelected = uiState.selectedGenre == genre
+                    activeFilters.forEach { filter ->
                         GlassChip(
-                            label = genre,
-                            selected = isSelected,
-                            onClick = {
-                                onGenreSelected(genre)
-                                coroutineScope.launch { gridState.scrollToItem(0) }
-                            }
+                            label = filter.label,
+                            selected = true,
+                            onClick = filter.onRemove,
+                            trailingIcon = Icons.Default.Close,
+                            trailingIconContentDescription = "Remove ${filter.label} filter",
+                            onTrailingIconClick = filter.onRemove,
+                            modifier = Modifier.testTag("active_filter_${filter.key}")
                         )
                     }
                 }
@@ -403,4 +442,184 @@ fun CatalogScreen(
             }
         }
     }
+
+    // ── Filters sheet ─────────────────────────────────────────────────────────
+    if (showFilterSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showFilterSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 24.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Filters",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.ExtraBold
+                        ),
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (activeFilters.isNotEmpty()) {
+                        TextButton(onClick = { applyFilter(onResetFilters) }) {
+                            Text("Reset all", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Text(
+                    text = "Changes apply as you select them.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                FilterSection(title = "Sort") {
+                    FilterChipRow {
+                        SORTS.forEach { (sortKey, label) ->
+                            GlassChip(
+                                label = label,
+                                selected = uiState.selectedSort == sortKey,
+                                onClick = { applyFilter { onSortSelected(sortKey) } }
+                            )
+                        }
+                    }
+                }
+
+                if (!isAdultPreset) {
+                    FilterSection(title = "Genre") {
+                        FilterChipRow {
+                            GENRES.forEach { genre ->
+                                GlassChip(
+                                    label = genre,
+                                    selected = uiState.selectedGenre == genre,
+                                    onClick = { applyFilter { onGenreSelected(genre) } }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (isAnimation) {
+                    Text(
+                        text = "Country and year filters are not available for Animation.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 20.dp)
+                    )
+                } else {
+                    FilterSection(
+                        title = "Country / Region",
+                        description = "Country of production. Not a language filter."
+                    ) {
+                        FilterChipRow {
+                            RegionalCategoryConfig.REGION_PRESETS.forEach { preset ->
+                                GlassChip(
+                                    label = preset.label,
+                                    selected = selectedPreset.id == preset.id,
+                                    onClick = {
+                                        // Picking a region always leaves the Adult preset, since
+                                        // Adult is intentionally not part of this group.
+                                        applyFilter { onPresetSelected(preset.id) }
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    if (isAdultEnabled) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(top = 20.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                        FilterSection(
+                            title = "Adult (18+)",
+                            description = "Shown because Adult content is enabled in Settings."
+                        ) {
+                            GlassChip(
+                                label = RegionalCategoryConfig.ADULT_PRESET.label,
+                                selected = isAdultPreset,
+                                onClick = {
+                                    val target = if (isAdultPreset) {
+                                        RegionalCategoryConfig.PRESET_ALL
+                                    } else {
+                                        RegionalCategoryConfig.ADULT_PRESET.id
+                                    }
+                                    applyFilter { onPresetSelected(target) }
+                                }
+                            )
+                        }
+                    }
+
+                    FilterSection(
+                        title = "Year",
+                        description = "Exact release year."
+                    ) {
+                        FilterChipRow {
+                            GlassChip(
+                                label = "Any year",
+                                selected = uiState.selectedYear == null,
+                                onClick = { applyFilter { onYearSelected(null) } }
+                            )
+                            RegionalCategoryConfig.YEAR_OPTIONS.forEach { year ->
+                                GlassChip(
+                                    label = year,
+                                    selected = uiState.selectedYear == year,
+                                    onClick = { applyFilter { onYearSelected(year) } }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterSection(
+    title: String,
+    description: String? = null,
+    content: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 20.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        if (description != null) {
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        content()
+    }
+}
+
+@Composable
+private fun FilterChipRow(content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        content = content
+    )
 }

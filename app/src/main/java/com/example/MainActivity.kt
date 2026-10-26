@@ -179,7 +179,6 @@ fun MainApp(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             if (!isInPipMode && !isDetailOpen && !isFullscreenPlaying) {
-                val isHighContrast = LocalHighContrast.current
                 val navColors = NavigationBarItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     selectedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -189,7 +188,6 @@ fun MainApp(
                 )
                 NavigationBar(
                     modifier = Modifier
-                        .then(if (isHighContrast) Modifier.border(BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)) else Modifier)
                         .windowInsetsPadding(WindowInsets.navigationBars),
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ) {
@@ -267,8 +265,7 @@ fun MainApp(
                     onThemeSelected = { viewModel.setThemeMode(it) },
                     onBackClick = { showAppearanceScreen = false },
                     isAdultEnabled = isAdultEnabled,
-                    onAdultToggle = { enabled -> viewModel.setAdultEnabled(enabled) },
-                    onOpenThemeQa = if (BuildConfig.DEBUG) { { showThemeQaScreen = true } } else null
+                    onAdultToggle = { enabled -> viewModel.setAdultEnabled(enabled) }
                 )
             } else if (isDetailOpen) {
                 DetailScreen(
@@ -337,7 +334,10 @@ fun MainApp(
                             onSearchClick = { viewModel.selectTab(AppTab.SEARCH) },
                             onSeeAllClick = { sectionName ->
                                 if (sectionName.equals(com.example.util.RegionalCategoryConfig.ROW_TITLE, ignoreCase = true)) {
-                                    viewModel.setCatalogRegion(com.example.util.RegionalCategoryConfig.ROW_TITLE)
+                                    viewModel.openCatalogPreset(
+                                        presetId = com.example.util.RegionalCategoryConfig.PRESET_INDIA,
+                                        type = com.example.ui.CatalogType.MOVIES
+                                    )
                                 }
                                 viewModel.selectTab(AppTab.CATALOG)
                             }
@@ -348,7 +348,8 @@ fun MainApp(
                         CatalogScreen(
                             uiState = catalogState,
                             onTypeSelected = { type -> viewModel.setCatalogType(type) },
-                            onRegionSelected = { region -> viewModel.setCatalogRegion(region) },
+                            onPresetSelected = { presetId -> viewModel.setCatalogPreset(presetId) },
+                            onYearSelected = { year -> viewModel.setCatalogYear(year) },
                             onGenreSelected = { genre -> viewModel.setCatalogGenre(genre) },
                             onSortSelected = { sort -> viewModel.setCatalogSort(sort) },
                             onMovieClick = { movie ->

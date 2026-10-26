@@ -139,14 +139,15 @@ private fun HeroBannerSlide(
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .clickable(onClick = onItemClick)
     ) {
-        // Full-bleed crop backdrop image
+        // Full artwork fills the hero banner: horizontal stays locked to the screen width,
+        // while the image is stretched vertically to cover the entire banner height.
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(item.posterUrl)
                 .crossfade(true)
                 .build(),
             contentDescription = item.safeName,
-            contentScale = ContentScale.Crop,
+            contentScale = ContentScale.FillBounds,
             modifier = Modifier.fillMaxSize()
         )
 
@@ -174,8 +175,9 @@ private fun HeroBannerSlide(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.00f to Color.Transparent,
-                            0.30f to Color.Transparent,
-                            0.65f to Color.Black.copy(alpha = 0.60f), // legibility-ok: hero image scrim
+                            0.40f to Color.Transparent,
+                            0.50f to Color.Black.copy(alpha = 0.45f), // legibility-ok: hero image scrim
+                            0.65f to Color.Black.copy(alpha = 0.70f), // legibility-ok: hero image scrim
                             0.88f to Color.Black.copy(alpha = 0.90f), // legibility-ok: hero image scrim
                             1.00f to MaterialTheme.colorScheme.background
                         )
@@ -226,7 +228,7 @@ private fun HeroBannerSlide(
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
-            // ── Primary Actions: Watch Now (Solid White) & Details (Outlined Translucent) ──
+            // ── Primary Actions: Watch Now (Primary) & Details (Tonal) ──
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -236,8 +238,8 @@ private fun HeroBannerSlide(
                     onClick = onWatchClick,
                     shape = RoundedCornerShape(999.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White, // legibility-ok: watch now button surface
-                        contentColor = Color.Black   // legibility-ok: watch now button text
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     modifier = Modifier
                         .weight(1f)
@@ -260,9 +262,10 @@ private fun HeroBannerSlide(
                 OutlinedButton(
                     onClick = onItemClick,
                     shape = RoundedCornerShape(999.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.60f)), // legibility-ok: details button border
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color.White // legibility-ok: details button text
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     modifier = Modifier
                         .weight(1f)

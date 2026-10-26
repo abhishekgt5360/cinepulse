@@ -242,6 +242,23 @@ fun DetailScreen(
                         .height(if (isLandscape) 180.dp else 280.dp)
                         .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                 ) {
+                    // Dimmed artwork fills the header while the full poster stays visible
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(subject?.cover?.url)
+                            .size(32, 32)
+                            .scale(Scale.FILL)
+                            .crossfade(400)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.55f)) // legibility-ok: backdrop ambient
+                    )
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(subject?.cover?.url)
@@ -670,7 +687,7 @@ fun DetailScreen(
                                              Icon(
                                                  imageVector = if (isCurrentEp && uiState.isPlaying) Icons.Default.GraphicEq else Icons.Default.PlayArrow,
                                                  contentDescription = if (isCurrentEp && uiState.isPlaying) "Playing" else "Play",
-                                                 tint = if (isCurrentEp) MaterialTheme.colorScheme.onPrimaryContainer else selColors.content,
+                                                 tint = if (isCurrentEp) MaterialTheme.colorScheme.primaryContainer else selColors.content,
                                                  modifier = Modifier.size(18.dp)
                                              )
                                          }

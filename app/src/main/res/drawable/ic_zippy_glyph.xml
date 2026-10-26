@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Zippy speed-play icon only, tight bounds. Single color: tint it in code. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="26dp"
+    android:height="20dp"
+    android:viewportWidth="84"
+    android:viewportHeight="64"
+    android:autoMirrored="false">
+    <group android:translateX="-14.5" android:translateY="-28">
+            <path android:pathData="M52,34 L52,86 L92,60 Z"
+                android:fillColor="#FF000000"
+                android:strokeColor="#FF000000"
+                android:strokeWidth="8"
+                android:strokeLineJoin="round" />
+            <path android:pathData="M30,46 L40,46"
+                android:strokeColor="#FF000000"
+                android:strokeWidth="7"
+                android:strokeLineCap="round" />
+            <path android:pathData="M20,60 L40,60"
+                android:strokeColor="#FF000000"
+                android:strokeWidth="7"
+                android:strokeLineCap="round" />
+            <path android:pathData="M30,74 L40,74"
+                android:strokeColor="#FF000000"
+                android:strokeWidth="7"
+                android:strokeLineCap="round" />
+    </group>
+</vector>

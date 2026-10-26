@@ -1,5 +1,6 @@
 package com.example.ui.screens.home
 
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,16 +16,21 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import com.example.data.local.WatchHistoryEntity
 import com.example.data.model.MovieItem
 import com.example.ui.HomeUiState
@@ -109,6 +115,25 @@ fun HomeScreen(
             }
         }
         return
+    }
+
+    // Home's header is a black scrim in every theme, so the transparent status bar
+    // needs light icons here even in light themes (PAPER). Restore the theme's own
+    // choice when leaving Home so light screens keep dark icons.
+    val view = LocalView.current
+    val restoreLightStatusBarIcons = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    DisposableEffect(view, restoreLightStatusBarIcons) {
+        val window = (view.context as? Activity)?.window
+        val insetsController = window?.let { WindowCompat.getInsetsController(it, view) }
+        onDispose {
+            insetsController?.isAppearanceLightStatusBars = restoreLightStatusBarIcons
+        }
+    }
+    SideEffect {
+        val window = (view.context as? Activity)?.window
+        window?.let {
+            WindowCompat.getInsetsController(it, view).isAppearanceLightStatusBars = false
+        }
     }
 
     Box(
@@ -225,20 +250,21 @@ fun HomeScreen(
                 .align(Alignment.TopCenter)
                 .background(
                     Brush.verticalGradient(
-                        listOf(
-                            Color.Black.copy(alpha = 0.75f), // legibility-ok: top bar vignette scrim
-                            Color.Black.copy(alpha = 0.35f), // legibility-ok: top bar vignette scrim
-                            Color.Transparent
-                        )
+                        // Keep the white lockup legible when light content scrolls underneath.
+                        0f to Color.Black.copy(alpha = 0.82f), // legibility-ok: top bar vignette scrim
+                        0.55f to Color.Black.copy(alpha = 0.70f), // legibility-ok: top bar vignette scrim
+                        0.72f to Color.Black.copy(alpha = 0.60f), // legibility-ok: top bar vignette scrim
+                        0.97f to Color.Transparent
                     )
                 )
                 .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                // Extra bottom padding is scrim-only fade room; it does not move the content.
+                .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 28.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Official Zippy Logo
-            CinePulseLogo(iconSize = 30.dp)
+            // Official Zippy lockup
+            ZippyLogo(tint = Color.White) // legibility-ok: top bar scrim is black in every theme
 
             // Top right search action
             IconButton(
