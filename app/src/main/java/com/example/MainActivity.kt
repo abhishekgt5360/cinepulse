@@ -180,6 +180,13 @@ fun MainApp(
         bottomBar = {
             if (!isInPipMode && !isDetailOpen && !isFullscreenPlaying) {
                 val isHighContrast = LocalHighContrast.current
+                val navColors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 NavigationBar(
                     modifier = Modifier
                         .then(if (isHighContrast) Modifier.border(BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline)) else Modifier)
@@ -194,6 +201,7 @@ fun MainApp(
                         },
                         icon = { Icon(if (!showAppearanceScreen && currentTab == AppTab.HOME) Icons.Filled.Home else Icons.Outlined.Home, contentDescription = "Home") },
                         label = { Text("Home") },
+                        colors = navColors,
                         modifier = Modifier.testTag("nav_home")
                     )
                     NavigationBarItem(
@@ -204,6 +212,7 @@ fun MainApp(
                         },
                         icon = { Icon(if (!showAppearanceScreen && currentTab == AppTab.CATALOG) Icons.Filled.Explore else Icons.Outlined.Explore, contentDescription = "Browse") },
                         label = { Text("Browse") },
+                        colors = navColors,
                         modifier = Modifier.testTag("nav_browse")
                     )
                     NavigationBarItem(
@@ -214,6 +223,7 @@ fun MainApp(
                         },
                         icon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
                         label = { Text("Search") },
+                        colors = navColors,
                         modifier = Modifier.testTag("nav_search")
                     )
                     NavigationBarItem(
@@ -224,6 +234,7 @@ fun MainApp(
                         },
                         icon = { Icon(if (!showAppearanceScreen && currentTab == AppTab.LIBRARY) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, contentDescription = "Library") },
                         label = { Text("Library") },
+                        colors = navColors,
                         modifier = Modifier.testTag("nav_library")
                     )
                     NavigationBarItem(
@@ -231,6 +242,7 @@ fun MainApp(
                         onClick = { showAppearanceScreen = true },
                         icon = { Icon(if (showAppearanceScreen) Icons.Filled.Settings else Icons.Outlined.Settings, contentDescription = "Settings") },
                         label = { Text("Settings") },
+                        colors = navColors,
                         modifier = Modifier.testTag("nav_settings")
                     )
                 }

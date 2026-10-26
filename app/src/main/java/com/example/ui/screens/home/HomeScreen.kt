@@ -1,18 +1,19 @@
 package com.example.ui.screens.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -29,7 +30,6 @@ import com.example.data.local.WatchHistoryEntity
 import com.example.data.model.MovieItem
 import com.example.ui.HomeUiState
 import com.example.ui.components.*
-import com.example.ui.theme.*
 
 @Composable
 fun HomeScreen(
@@ -47,7 +47,9 @@ fun HomeScreen(
     // Loading state
     if (uiState.isLoading && uiState.sections.isEmpty() && uiState.bannerItems.isEmpty()) {
         Box(
-            modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -58,7 +60,7 @@ fun HomeScreen(
                 )
                 Spacer(Modifier.height(14.dp))
                 Text(
-                    text = "Loading CinePulse...",
+                    text = "Loading Zippy...",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.5.sp
                 )
@@ -70,10 +72,16 @@ fun HomeScreen(
     // Error state
     if (uiState.errorMessage != null && uiState.sections.isEmpty()) {
         Box(
-            modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(24.dp),
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
                 Column(
                     modifier = Modifier.padding(28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -104,101 +112,139 @@ fun HomeScreen(
         return
     }
 
-    LazyColumn(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .testTag("home_feed_list"),
-        contentPadding = PaddingValues(bottom = 100.dp)
     ) {
-        // ── Top Header (Tightened: No wide black void) ────────────────────────
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Official CinePulse Logo asset matching cinepulse-icon.jpg
-                CinePulseLogo(iconSize = 28.dp)
-
-                // Glass search pill
-                Row(
-                    modifier = Modifier
-                        .height(36.dp)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) { onSearchClick() }
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "Search movies & shows...",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag("home_feed_list"),
+            contentPadding = PaddingValues(bottom = 100.dp)
+        ) {
+            // ── Full-Bleed Immersive Hero Banner (Extends under top bar) ──────
+            if (uiState.bannerItems.isNotEmpty()) {
+                item {
+                    HeroBanner(
+                        items = uiState.bannerItems,
+                        onItemClick = onMovieClick,
+                        onWatchClick = onWatchHeroClick
                     )
                 }
             }
-        }
 
-        // ── Full-Bleed Apple TV Hero Banner ─────────────────────────────────
-        if (uiState.bannerItems.isNotEmpty()) {
-            item {
-                HeroBanner(
-                    items = uiState.bannerItems,
-                    onItemClick = onMovieClick,
-                    onWatchClick = onWatchHeroClick
-                )
+            // ── Continue Watching ────────────────────────────────────────────
+            if (watchHistory.isNotEmpty()) {
+                item {
+                    Column(modifier = Modifier.padding(top = 20.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 18.dp)
+                                .clickable { onSeeAllClick("History") },
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayCircleOutline,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "Continue Watching",
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "See All History",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 18.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(watchHistory, key = { it.subjectId }) { historyItem ->
+                                ContinueWatchingCard(
+                                    history = historyItem,
+                                    onPlayClick = { onResumeHistoryClick(historyItem) },
+                                    onDeleteClick = { onDeleteHistoryClick(historyItem.subjectId) }
+                                )
+                            }
+                        }
+                    }
+                }
             }
-        }
 
-        // ── Continue Watching ────────────────────────────────────────────────
-        if (watchHistory.isNotEmpty()) {
-            item {
-                Column(modifier = Modifier.padding(top = 16.dp)) {
+            // ── Content Sections ─────────────────────────────────────────────
+            items(uiState.sections, key = { it.section }) { section ->
+                Column(modifier = Modifier.padding(top = 18.dp)) {
+                    // Section heading with brand gradient accent
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 18.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayCircleOutline,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "Continue Watching",
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .width(3.dp)
+                                    .height(18.dp)
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                MaterialTheme.colorScheme.primary,
+                                                MaterialTheme.colorScheme.primaryContainer
+                                            )
+                                        )
+                                    )
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = section.section,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        TextButton(
+                            onClick = { onSeeAllClick(section.section) }
+                        ) {
+                            Text(
+                                text = "See all",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
-                    Spacer(Modifier.height(12.dp))
+
+                    Spacer(Modifier.height(10.dp))
+
+                    val uniqueItems = remember(section.items) {
+                        section.items.distinctBy { "${it.safeSlug}_${it.subjectId}" }
+                    }
+
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 18.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(watchHistory, key = { it.subjectId }) { historyItem ->
-                            ContinueWatchingCard(
-                                history = historyItem,
-                                onPlayClick = { onResumeHistoryClick(historyItem) },
-                                onDeleteClick = { onDeleteHistoryClick(historyItem.subjectId) }
+                        items(uniqueItems, key = { "${it.safeSlug}_${it.subjectId}" }) { movie ->
+                            MoviePosterCard(
+                                movie = movie,
+                                onClick = { onMovieClick(movie) }
                             )
                         }
                     }
@@ -206,63 +252,61 @@ fun HomeScreen(
             }
         }
 
-        // ── Content Sections ─────────────────────────────────────────────────
-        items(uiState.sections, key = { it.section }) { section ->
-            Column(modifier = Modifier.padding(top = 18.dp)) {
-                // Section heading with brand gradient accent
-                Row(
+        // ── Floating Immersive Top Header Overlay ───────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Black.copy(alpha = 0.75f), // legibility-ok: top bar vignette scrim
+                            Color.Black.copy(alpha = 0.35f), // legibility-ok: top bar vignette scrim
+                            Color.Transparent
+                        )
+                    )
+                )
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Official Zippy Logo
+            CinePulseLogo(iconSize = 30.dp)
+
+            // Top right search & notification actions
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IconButton(
+                    onClick = onSearchClick,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 18.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.35f)) // legibility-ok: search icon circle
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .width(3.dp)
-                                .height(18.dp)
-                                .clip(RoundedCornerShape(999.dp))
-                                .background(
-                                    Brush.verticalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer))
-                                )
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = section.section,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    TextButton(
-                        onClick = { onSeeAllClick(section.section) }
-                    ) {
-                        Text(
-                            text = "See all",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = Color.White, // legibility-ok: search icon tint
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
 
-                Spacer(Modifier.height(10.dp))
-
-                val uniqueItems = remember(section.items) {
-                    section.items.distinctBy { "${it.safeSlug}_${it.subjectId}" }
-                }
-
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 18.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                IconButton(
+                    onClick = { /* Notifications */ },
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.35f)) // legibility-ok: notification icon circle
                 ) {
-                    items(uniqueItems, key = { "${it.safeSlug}_${it.subjectId}" }) { movie ->
-                        MoviePosterCard(
-                            movie = movie,
-                            onClick = { onMovieClick(movie) }
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Outlined.Notifications,
+                        contentDescription = "Notifications",
+                        tint = Color.White, // legibility-ok: notification icon tint
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }

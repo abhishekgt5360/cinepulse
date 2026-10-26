@@ -3,11 +3,10 @@ package com.example.ui.components
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,8 +23,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,30 +46,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import coil.size.Scale
 import com.example.data.model.MovieItem
-
-
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import com.example.ui.theme.LocalHighContrast
-
 import kotlinx.coroutines.delay
 
 /**
- * Apple TV & Netflix style full-bleed cinematic Hero Banner.
- * Designed with official brand gradient #FF6A3D -> #E63956 and true liquid glass.
+ * Immersive full-bleed Hero Banner extending behind the top status bar.
  */
 @Composable
 fun HeroBanner(
-    items:        List<MovieItem>,
-    onItemClick:  (MovieItem) -> Unit,
+    items: List<MovieItem>,
+    onItemClick: (MovieItem) -> Unit,
     onWatchClick: (MovieItem) -> Unit,
-    modifier:     Modifier = Modifier
+    modifier: Modifier = Modifier
 ) {
     if (items.isEmpty()) return
 
-    val pageCount  = items.size.coerceAtMost(8)
+    val pageCount = items.size.coerceAtMost(8)
     val pagerState = rememberPagerState(pageCount = { pageCount })
 
     // Auto-advance every 5 seconds
@@ -84,16 +78,16 @@ fun HeroBanner(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(16f / 9f)
+            .height(460.dp)
             .testTag("hero_banner")
     ) {
         HorizontalPager(
-            state    = pagerState,
+            state = pagerState,
             modifier = Modifier.fillMaxSize()
         ) { page ->
             HeroBannerSlide(
-                item         = items[page],
-                onItemClick  = { onItemClick(items[page]) },
+                item = items[page],
+                onItemClick = { onItemClick(items[page]) },
                 onWatchClick = { onWatchClick(items[page]) }
             )
         }
@@ -102,7 +96,7 @@ fun HeroBanner(
         if (pagerState.pageCount > 1) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment     = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 12.dp)
@@ -110,10 +104,10 @@ fun HeroBanner(
                 repeat(pagerState.pageCount) { index ->
                     val isActive = pagerState.currentPage == index
                     val dotWidth by animateDpAsState(
-                        targetValue   = if (isActive) 22.dp else 6.dp,
+                        targetValue = if (isActive) 22.dp else 6.dp,
                         animationSpec = spring(
                             dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness    = Spring.StiffnessMedium
+                            stiffness = Spring.StiffnessMedium
                         ),
                         label = "dot_width_$index"
                     )
@@ -124,7 +118,7 @@ fun HeroBanner(
                             .clip(RoundedCornerShape(999.dp))
                             .background(
                                 if (isActive) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                else Color.White.copy(alpha = 0.40f) // legibility-ok: dot indicator
                             )
                     )
                 }
@@ -135,8 +129,8 @@ fun HeroBanner(
 
 @Composable
 private fun HeroBannerSlide(
-    item:         MovieItem,
-    onItemClick:  () -> Unit,
+    item: MovieItem,
+    onItemClick: () -> Unit,
     onWatchClick: () -> Unit
 ) {
     Box(
@@ -145,33 +139,34 @@ private fun HeroBannerSlide(
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .clickable(onClick = onItemClick)
     ) {
-        // Uncropped backdrop image
+        // Full-bleed crop backdrop image
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(item.posterUrl)
-                .scale(Scale.FIT)
                 .crossfade(true)
                 .build(),
             contentDescription = item.safeName,
-            contentScale       = ContentScale.Fit,
-            alignment          = Alignment.Center,
-            modifier           = Modifier.fillMaxSize()
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
         )
 
-        // Top vignette (for status bar clarity)
+        // Top vignette for top bar & status bar icon clarity
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp)
+                .height(140.dp)
                 .align(Alignment.TopCenter)
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0x75000000), Color.Transparent) // legibility-ok: hero image vignette
+                        listOf(
+                            Color.Black.copy(alpha = 0.70f), // legibility-ok: top vignette scrim
+                            Color.Transparent
+                        )
                     )
                 )
         )
 
-        // Cinematic bottom scrim fading seamlessly into true Jet Black (#000000)
+        // Cinematic bottom scrim fading into background
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -179,9 +174,9 @@ private fun HeroBannerSlide(
                     Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.00f to Color.Transparent,
-                            0.25f to Color.Transparent,
-                            0.60f to Color.Black.copy(alpha = 0.60f), // legibility-ok: hero image scrim
-                            0.85f to Color.Black.copy(alpha = 0.85f), // legibility-ok: hero image scrim
+                            0.30f to Color.Transparent,
+                            0.65f to Color.Black.copy(alpha = 0.60f), // legibility-ok: hero image scrim
+                            0.88f to Color.Black.copy(alpha = 0.90f), // legibility-ok: hero image scrim
                             1.00f to MaterialTheme.colorScheme.background
                         )
                     )
@@ -193,60 +188,99 @@ private fun HeroBannerSlide(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomStart)
-                .padding(horizontal = 20.dp, vertical = 26.dp)
+                .padding(horizontal = 20.dp, vertical = 28.dp)
         ) {
-            // Movie/Show Title
-            Text(
-                text       = item.safeName,
-                color      = Color.White, // legibility-ok: text over hero image scrim
-                fontSize   = 26.sp,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines   = 2,
-                overflow   = TextOverflow.Ellipsis,
-                lineHeight = 30.sp
-            )
+            // Type Pill
+            val typeText = if (item.isTvSeries) "SERIES" else "MOVIE"
+            PosterBadge(text = typeText)
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Metadata Row: Rating, Year, Genre
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment     = Alignment.CenterVertically
-            ) {
-                if (!item.rating.isNullOrBlank()) {
-                    PosterBadge(text = "★ ${item.rating}")
-                }
+            // Movie/Show Title
+            Text(
+                text = item.safeName,
+                color = Color.White, // legibility-ok: text over hero image scrim
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 32.sp
+            )
 
-                item.year?.takeIf { it.isNotBlank() }?.let { year ->
-                    PosterBadge(text = year)
-                }
+            Spacer(modifier = Modifier.height(6.dp))
 
-                item.genre?.split(",")?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { genre ->
-                    PosterBadge(text = genre)
-                }
+            // Metadata Row: Genre, Year, Rating
+            val metaList = listOfNotNull(
+                item.genre?.split(",")?.firstOrNull()?.trim(),
+                item.year?.takeIf { it.isNotBlank() }
+            )
+            if (metaList.isNotEmpty()) {
+                Text(
+                    text = metaList.joinToString(" • "),
+                    color = Color.White.copy(alpha = 0.85f), // legibility-ok: hero metadata text
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+            } else {
+                Spacer(modifier = Modifier.height(10.dp))
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // ── Primary Actions: Watch (Brand Gradient) & Details (Liquid Glass) ──
+            // ── Primary Actions: Watch Now (Solid White) & Details (Outlined Translucent) ──
             Row(
-                modifier              = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment     = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                LiquidGlassButton(
-                    text    = "Watch Now",
+                Button(
                     onClick = onWatchClick,
-                    icon    = Icons.Default.PlayArrow,
-                    modifier = Modifier.weight(1f).testTag("hero_watch_button")
-                )
+                    shape = RoundedCornerShape(999.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White, // legibility-ok: watch now button surface
+                        contentColor = Color.Black   // legibility-ok: watch now button text
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .testTag("hero_watch_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Watch Now",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
 
-                LiquidGlassSecondaryButton(
-                    text    = "Details",
+                OutlinedButton(
                     onClick = onItemClick,
-                    icon    = Icons.Default.Info,
-                    modifier = Modifier.weight(1f).testTag("hero_details_button")
-                )
+                    shape = RoundedCornerShape(999.dp),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.60f)), // legibility-ok: details button border
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color.White // legibility-ok: details button text
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .testTag("hero_details_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Details",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
             }
         }
     }
