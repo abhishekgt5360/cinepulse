@@ -13,7 +13,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -274,40 +273,20 @@ fun HomeScreen(
             // Official Zippy Logo
             CinePulseLogo(iconSize = 30.dp)
 
-            // Top right search & notification actions
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Top right search action
+            IconButton(
+                onClick = onSearchClick,
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.35f)) // legibility-ok: search icon circle
             ) {
-                IconButton(
-                    onClick = onSearchClick,
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.35f)) // legibility-ok: search icon circle
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = Color.White, // legibility-ok: search icon tint
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                IconButton(
-                    onClick = { /* Notifications */ },
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.35f)) // legibility-ok: notification icon circle
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Notifications,
-                        contentDescription = "Notifications",
-                        tint = Color.White, // legibility-ok: notification icon tint
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = Color.White, // legibility-ok: search icon tint
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }

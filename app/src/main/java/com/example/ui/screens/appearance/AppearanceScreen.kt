@@ -27,6 +27,14 @@ import com.example.ui.theme.OledScheme
 import com.example.ui.theme.PaperScheme
 import com.example.ui.theme.ThemeMode
 
+fun ThemeMode.getDisplayName(): String = when (this) {
+    ThemeMode.CRIMSON -> "Crimson"
+    ThemeMode.OLED -> "OLED Black"
+    ThemeMode.DYNAMIC -> "System Colors"
+    ThemeMode.HIGH_CONTRAST -> "High Contrast"
+    ThemeMode.PAPER -> "Paper"
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceScreen(
@@ -38,6 +46,8 @@ fun AppearanceScreen(
     onOpenThemeQa: (() -> Unit)? = null
 ) {
     var showAdultConfirmDialog by remember { mutableStateOf(false) }
+    var expandedThemeDropdown by remember { mutableStateOf(false) }
+    val isDynamicSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     Scaffold(
         topBar = {
             TopAppBar(
@@ -68,63 +78,46 @@ fun AppearanceScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            // Crimson Option
-            ThemeOptionCard(
-                title = "Crimson",
-                subtitle = "Default dark theme with crimson accents",
-                selected = currentThemeMode == ThemeMode.CRIMSON,
-                onClick = { onThemeSelected(ThemeMode.CRIMSON) },
-                primarySwatch = MaterialTheme.colorScheme.primary,
-                backgroundSwatch = Color(0xFF1A1112) // legibility-ok: theme swatch preview
-            )
-
-            // OLED Option
-            ThemeOptionCard(
-                title = "OLED black",
-                subtitle = "Pitch black background for AMOLED screens",
-                selected = currentThemeMode == ThemeMode.OLED,
-                onClick = { onThemeSelected(ThemeMode.OLED) },
-                primarySwatch = OledScheme.primary,
-                backgroundSwatch = OledScheme.background
-            )
-
-            // System Colors Option (Dynamic)
-            val isDynamicSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-            ThemeOptionCard(
-                title = "System colors",
-                subtitle = if (isDynamicSupported) "Uses dynamic colors from your wallpaper" else "Requires Android 12 or higher",
-                selected = currentThemeMode == ThemeMode.DYNAMIC && isDynamicSupported,
-                enabled = isDynamicSupported,
-                onClick = {
-                    if (isDynamicSupported) {
-                        onThemeSelected(ThemeMode.DYNAMIC)
+            ExposedDropdownMenuBox(
+                expanded = expandedThemeDropdown,
+                onExpandedChange = { expandedThemeDropdown = it },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = currentThemeMode.getDisplayName(),
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedThemeDropdown) },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                    ),
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expandedThemeDropdown,
+                    onDismissRequest = { expandedThemeDropdown = false },
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                ) {
+                    ThemeMode.entries.forEach { mode ->
+                        val isSupported = mode != ThemeMode.DYNAMIC || isDynamicSupported
+                        if (isSupported) {
+                            DropdownMenuItem(
+                                text = { Text(mode.getDisplayName(), color = MaterialTheme.colorScheme.onSurface) },
+                                onClick = {
+                                    onThemeSelected(mode)
+                                    expandedThemeDropdown = false
+                                },
+                                contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                            )
+                        }
                     }
-                },
-                primarySwatch = MaterialTheme.colorScheme.primary,
-                backgroundSwatch = MaterialTheme.colorScheme.surface
-            )
-
-            // High Contrast Option
-            ThemeOptionCard(
-                title = "High contrast",
-                subtitle = "Black and white with outlines",
-                selected = currentThemeMode == ThemeMode.HIGH_CONTRAST,
-                onClick = { onThemeSelected(ThemeMode.HIGH_CONTRAST) },
-                primarySwatch = HighContrastScheme.primary,
-                backgroundSwatch = HighContrastScheme.background,
-                outlineSwatch = HighContrastScheme.outline
-            )
-
-            // Paper Option
-            ThemeOptionCard(
-                title = "Paper",
-                subtitle = "Warm off-white, light",
-                selected = currentThemeMode == ThemeMode.PAPER,
-                onClick = { onThemeSelected(ThemeMode.PAPER) },
-                primarySwatch = PaperScheme.primaryContainer,
-                backgroundSwatch = PaperScheme.background,
-                outlineSwatch = PaperScheme.primary
-            )
+                }
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
