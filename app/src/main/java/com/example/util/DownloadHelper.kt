@@ -38,9 +38,9 @@ object DownloadHelper {
 
             val request = DownloadManager.Request(Uri.parse(url))
                 .setTitle(fileName)
-                .setDescription("Downloading $title ($resolution) via CinePulse")
+                .setDescription("Downloading $title ($resolution) via Zippy")
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "CinePulse/$fileName")
+                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "Zippy/$fileName")
                 .addRequestHeader("User-Agent", HTTP_USER_AGENT)
                 .addRequestHeader("Referer", REFERER_HEADER)
                 .addRequestHeader("Origin", ORIGIN_HEADER)
@@ -48,7 +48,7 @@ object DownloadHelper {
                 .setAllowedOverRoaming(true)
 
             downloadManager.enqueue(request)
-            Toast.makeText(context, "Downloading $fileName to Downloads/CinePulse", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Downloading $fileName to Downloads/Zippy", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             // Fallback: If subfolder creation is restricted on specific vendor ROM, retry directly in Downloads root
             try {
@@ -58,7 +58,7 @@ object DownloadHelper {
                 val fileName = "${safeTitle}_${resolution}.mp4"
                 val fallbackRequest = DownloadManager.Request(Uri.parse(url))
                     .setTitle(fileName)
-                    .setDescription("Downloading $title ($resolution) via CinePulse")
+                    .setDescription("Downloading $title ($resolution) via Zippy")
                     .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                     .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
                     .addRequestHeader("User-Agent", HTTP_USER_AGENT)

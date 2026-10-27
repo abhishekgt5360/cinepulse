@@ -318,7 +318,7 @@ fun DetailScreen(
                                 onClick = {
                                     val intent = Intent().apply {
                                         action = Intent.ACTION_SEND
-                                        putExtra(Intent.EXTRA_TEXT, "Watch ${uiState.title} on CinePulse!")
+                                        putExtra(Intent.EXTRA_TEXT, "Watch ${uiState.title} on Zippy!")
                                         type = "text/plain"
                                     }
                                     context.startActivity(Intent.createChooser(intent, "Share"))
