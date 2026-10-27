@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Check
 import com.example.ui.theme.LocalHighContrast
 import com.example.ui.theme.selectableColors
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.History
@@ -359,15 +358,15 @@ private fun HistoryRowCard(
 fun LibraryScreen(
     watchlist: List<WatchlistEntity>,
     watchHistory: List<WatchHistoryEntity>,
+    initialTab: LibraryTab = LibraryTab.WATCHLIST,
     onMovieClick: (MovieItem) -> Unit,
     onResumeHistoryClick: (WatchHistoryEntity) -> Unit,
     onDeleteHistoryItem: (String) -> Unit,
     onClearHistory: () -> Unit,
     onExploreClick: () -> Unit,
-    onOpenDevCredit: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var selectedTab by remember { mutableStateOf(LibraryTab.WATCHLIST) }
+    var selectedTab by remember(initialTab) { mutableStateOf(initialTab) }
     var showClearHistoryDialog by remember { mutableStateOf(false) }
 
     Column(
@@ -394,27 +393,8 @@ fun LibraryScreen(
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Dev credit — small glass icon button
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .clickable { onOpenDevCredit() }
-                        .testTag("library_dev_credit_button"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Code,
-                        contentDescription = "Developer Credit",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
                 // Clear History — glass danger button (CinemaRed border)
                 if (selectedTab == LibraryTab.HISTORY && watchHistory.isNotEmpty()) {
-                    Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
                             .size(36.dp)

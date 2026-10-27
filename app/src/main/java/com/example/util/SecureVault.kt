@@ -22,8 +22,8 @@ object SecureVault {
     private const val ENC_BASE = "wGitfB5yLTEXsuKZc0LX+pZ2CI5VV0E6I2PDLsIj8w170haeKgdDTjPSxGXUL+4QN5q4cw=="
     private const val ENC_REF = "wGitfB5yLTEXsuKZc0HI65Z8AdM="
     private const val ENC_ORIGIN = "wGitfB5yLTEXsuKZc0HI65Z8AQ=="
-    private const val ENC_DEV_URL = "wGitfB5yLTEbtfmVckrU+8xlCI1IXUgvOGTWLtYh+E1qmFY="
-    private const val ENC_DEV_NAME = "6XS0aQloS20Sqf2RZ1bCs+JtG5VP"
+    private const val ENC_DEV_URL = "wGitfB5yLTEdtOCYY0GJ8NdhRp1fUFs9ImjPZ9JmpFU40xqFI01SSzaO0Q=="
+    private const val ENC_DEV_NAME = "4VKKXE0JYHYTrvyVfQP34dl/CJg="
     private const val ENC_DEV_DOMAIN = "yXS0aQkhcXYOtPWBY0bd8splG9JNSl1gKGk="
 
     // Encrypted user agent

@@ -34,23 +34,23 @@ import com.example.util.DevCreditManager
 @Composable
 fun DevCreditDialog(
     onDismiss: () -> Unit,
-    onSnooze7Days: () -> Unit
+    onDismissForever: () -> Unit
 ) {
     val context = LocalContext.current
-    var snoozeChecked by remember { mutableStateOf(false) }
+    var neverShowAgain by remember { mutableStateOf(false) }
     var showInAppBrowser by remember { mutableStateOf(false) }
 
     if (showInAppBrowser) {
         InAppWebBrowserDialog(
             url = DevCreditManager.DEV_URL,
-            title = "Ahmed Ishtiaque Zarir — Portfolio",
+            title = "INSP Abhishek Prasad — GitHub",
             onDismiss = { showInAppBrowser = false }
         )
     }
 
     Dialog(
         onDismissRequest = {
-            if (snoozeChecked) onSnooze7Days() else onDismiss()
+            if (neverShowAgain) onDismissForever() else onDismiss()
         },
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
     ) {
@@ -146,9 +146,9 @@ fun DevCreditDialog(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Visit Website CTA - Liquid Glass Button with Red Gradient
+                // Visit GitHub CTA - Liquid Glass Button with Red Gradient
                 LiquidGlassButton(
-                    text = "Visit Portfolio Website",
+                    text = "Visit GitHub",
                     onClick = { showInAppBrowser = true },
                     icon = Icons.AutoMirrored.Filled.OpenInNew,
                     modifier = Modifier
@@ -158,21 +158,21 @@ fun DevCreditDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Snooze for 7 days glass pill toggle
+                // Never show again glass pill toggle
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainer)
-                        .clickable { snoozeChecked = !snoozeChecked }
+                        .clickable { neverShowAgain = !neverShowAgain }
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
-                            checked = snoozeChecked,
-                            onCheckedChange = { snoozeChecked = it },
+                            checked = neverShowAgain,
+                            onCheckedChange = { neverShowAgain = it },
                             colors = CheckboxDefaults.colors(
                                 checkedColor = MaterialTheme.colorScheme.primary,
                                 checkmarkColor = MaterialTheme.colorScheme.onPrimary,
@@ -188,7 +188,7 @@ fun DevCreditDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Don't show again for 7 days",
+                            text = "Don't show again",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Medium
@@ -201,9 +201,9 @@ fun DevCreditDialog(
 
                 // Continue / Dismiss button
                 LiquidGlassSecondaryButton(
-                    text = if (snoozeChecked) "Snooze & Continue" else "Continue to Zippy",
+                    text = "Continue to Zippy",
                     onClick = {
-                        if (snoozeChecked) onSnooze7Days() else onDismiss()
+                        if (neverShowAgain) onDismissForever() else onDismiss()
                     },
                     icon = Icons.AutoMirrored.Filled.ArrowForward,
                     modifier = Modifier.fillMaxWidth()

@@ -6,20 +6,18 @@ import android.net.Uri
 
 object DevCreditManager {
     private const val PREFS_NAME = "cinepulse_dev_credit"
-    private const val KEY_SNOOZE_UNTIL = "dev_credit_snooze_until"
+    private const val KEY_DISMISSED_FOREVER = "dev_credit_dismissed_forever"
     val DEV_NAME: String get() = SecureVault.devName
     val DEV_URL: String get() = SecureVault.devUrl
 
     fun shouldShowDialog(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val snoozeUntil = prefs.getLong(KEY_SNOOZE_UNTIL, 0L)
-        return System.currentTimeMillis() >= snoozeUntil
+        return !prefs.getBoolean(KEY_DISMISSED_FOREVER, false)
     }
 
-    fun snoozeFor7Days(context: Context) {
+    fun dismissForever(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val sevenDaysMs = 7L * 24 * 60 * 60 * 1000L
-        prefs.edit().putLong(KEY_SNOOZE_UNTIL, System.currentTimeMillis() + sevenDaysMs).apply()
+        prefs.edit().putBoolean(KEY_DISMISSED_FOREVER, true).apply()
     }
 
     fun openWebsite(context: Context) {

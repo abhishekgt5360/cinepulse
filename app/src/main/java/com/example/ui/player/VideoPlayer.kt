@@ -67,6 +67,8 @@ import com.example.ui.theme.*
 import com.example.util.CaptionPreferences
 import com.example.util.PlaybackSession
 import com.example.util.ResumeManager
+import com.example.util.ResumeNoticePosition
+import com.example.util.ResumeNoticePreferences
 import com.example.util.StreamTokenManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -149,8 +151,11 @@ fun VideoPlayer(
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
 
     // Session Start Position
+    val resumeNoticeConfig = remember { ResumeNoticePreferences.load(context) }
     val startPosMs = session?.startPositionMs ?: 0L
-    var showResumeSnackbar by remember(session?.sessionId) { mutableStateOf(startPosMs > 0L) }
+    var showResumeSnackbar by remember(session?.sessionId) {
+        mutableStateOf(startPosMs > 0L && resumeNoticeConfig.enabled)
+    }
     var hasAppliedSessionStart by remember(session?.sessionId) { mutableStateOf(false) }
 
     // Gesture HUD feedback
@@ -341,6 +346,19 @@ fun VideoPlayer(
         if (controlsVisible && isPlaying && !isLocked) {
             delay(3500)
             controlsVisible = false
+        }
+    }
+
+    // Auto-hide the resume notice after the user-configured delay
+    LaunchedEffect(showResumeSnackbar, isPlaying, resumeNoticeConfig.durationMs) {
+        if (
+            showResumeSnackbar &&
+            resumeNoticeConfig.enabled &&
+            resumeNoticeConfig.durationMs > ResumeNoticePreferences.DURATION_UNTIL_DISMISSED &&
+            isPlaying
+        ) {
+            delay(resumeNoticeConfig.durationMs)
+            showResumeSnackbar = false
         }
     }
 
@@ -577,51 +595,64 @@ fun VideoPlayer(
             }
         }
 
-        // Resumed Snackbar Notice with "Start over" action
-        if (showResumeSnackbar && startPosMs > 0L) {
+        // Resume notice with configurable text, action, duration, and position.
+        // Intentionally drawn without an enclosing background.
+        if (showResumeSnackbar && startPosMs > 0L && resumeNoticeConfig.enabled) {
+            val isTopPosition = resumeNoticeConfig.position == ResumeNoticePosition.TOP
+            val noticeShadow = Shadow(
+                color = Color.Black.copy(alpha = 0.9f), // legibility-ok: text over video
+                offset = Offset(1.5f, 1.5f),
+                blurRadius = 6f
+            )
+
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = if (controlsVisible) 76.dp else 24.dp)
+                    .align(if (isTopPosition) Alignment.TopCenter else Alignment.BottomCenter)
+                    .padding(
+                        if (isTopPosition) {
+                            PaddingValues(top = if (controlsVisible) 76.dp else 24.dp)
+                        } else {
+                            PaddingValues(bottom = if (controlsVisible) 76.dp else 24.dp)
+                        }
+                    )
                     .padding(horizontal = 24.dp)
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
-                    border = if (isHighContrast) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null,
-                    modifier = Modifier.padding(6.dp)
+                Row(
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Text(
+                        text = resumeNoticeConfig.formatMessage(
+                            ResumeManager.formatTimeLabel(startPosMs)
+                        ),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = Color.White, // legibility-ok: text over video
+                            fontWeight = FontWeight.Bold,
+                            shadow = noticeShadow
+                        ),
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    TextButton(
+                        onClick = {
+                            showResumeSnackbar = false
+                            exoPlayer.seekTo(0L)
+                            currentPosition = 0L
+                            if (session != null) {
+                                onStartOver(session.subjectId, session.season, session.episode, session.isSeries)
+                            }
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "Resumed from ${ResumeManager.formatTimeLabel(startPosMs)}",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.Bold
+                            text = resumeNoticeConfig.resolvedActionLabel(),
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                shadow = noticeShadow
                             )
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        TextButton(
-                            onClick = {
-                                showResumeSnackbar = false
-                                exoPlayer.seekTo(0L)
-                                currentPosition = 0L
-                                if (session != null) {
-                                    onStartOver(session.subjectId, session.season, session.episode, session.isSeries)
-                                }
-                            },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "Start over",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            )
-                        }
                     }
                 }
             }

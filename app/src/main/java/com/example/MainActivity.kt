@@ -48,6 +48,7 @@ import com.example.ui.screens.catalog.CatalogScreen
 import com.example.ui.screens.detail.DetailScreen
 import com.example.ui.screens.home.HomeScreen
 import com.example.ui.screens.library.LibraryScreen
+import com.example.ui.screens.library.LibraryTab
 import com.example.ui.screens.search.SearchScreen
 import com.example.ui.theme.*
 import com.example.util.DevCreditManager
@@ -143,18 +144,19 @@ fun MainApp(
 
     val exoPlayer = remember(context) { viewModel.getPlayer(context) }
 
-    // Developer credit dialog on app start with 7-day snooze capability (hidden in PiP mode)
+    // Developer credit dialog on app start with permanent dismissal (hidden in PiP mode)
     var showDevCreditDialog by remember {
         mutableStateOf(!isInPipMode && DevCreditManager.shouldShowDialog(context))
     }
     var showAppearanceScreen by remember { mutableStateOf(false) }
     var showThemeQaScreen by remember { mutableStateOf(false) }
+    var libraryInitialTab by remember { mutableStateOf(LibraryTab.WATCHLIST) }
 
     if (showDevCreditDialog && !isInPipMode) {
         DevCreditDialog(
             onDismiss = { showDevCreditDialog = false },
-            onSnooze7Days = {
-                DevCreditManager.snoozeFor7Days(context)
+            onDismissForever = {
+                DevCreditManager.dismissForever(context)
                 showDevCreditDialog = false
             }
         )
@@ -228,6 +230,7 @@ fun MainApp(
                         selected = !showAppearanceScreen && currentTab == AppTab.LIBRARY,
                         onClick = {
                             showAppearanceScreen = false
+                            libraryInitialTab = LibraryTab.WATCHLIST
                             viewModel.selectTab(AppTab.LIBRARY)
                         },
                         icon = { Icon(if (!showAppearanceScreen && currentTab == AppTab.LIBRARY) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder, contentDescription = "Library") },
@@ -265,7 +268,8 @@ fun MainApp(
                     onThemeSelected = { viewModel.setThemeMode(it) },
                     onBackClick = { showAppearanceScreen = false },
                     isAdultEnabled = isAdultEnabled,
-                    onAdultToggle = { enabled -> viewModel.setAdultEnabled(enabled) }
+                    onAdultToggle = { enabled -> viewModel.setAdultEnabled(enabled) },
+                    onOpenDevCredit = { showDevCreditDialog = true }
                 )
             } else if (isDetailOpen) {
                 DetailScreen(
@@ -333,13 +337,19 @@ fun MainApp(
                             onRetry = { viewModel.loadHomeFeed() },
                             onSearchClick = { viewModel.selectTab(AppTab.SEARCH) },
                             onSeeAllClick = { sectionName ->
-                                if (sectionName.equals(com.example.util.RegionalCategoryConfig.ROW_TITLE, ignoreCase = true)) {
-                                    viewModel.openCatalogPreset(
-                                        presetId = com.example.util.RegionalCategoryConfig.PRESET_INDIA,
-                                        type = com.example.ui.CatalogType.MOVIES
-                                    )
+                                if (sectionName.equals("History", ignoreCase = true)) {
+                                    // "Continue Watching" see-all opens the full history list
+                                    libraryInitialTab = LibraryTab.HISTORY
+                                    viewModel.selectTab(AppTab.LIBRARY)
+                                } else {
+                                    if (sectionName.equals(com.example.util.RegionalCategoryConfig.ROW_TITLE, ignoreCase = true)) {
+                                        viewModel.openCatalogPreset(
+                                            presetId = com.example.util.RegionalCategoryConfig.PRESET_INDIA,
+                                            type = com.example.ui.CatalogType.MOVIES
+                                        )
+                                    }
+                                    viewModel.selectTab(AppTab.CATALOG)
                                 }
-                                viewModel.selectTab(AppTab.CATALOG)
                             }
                         )
                     }
@@ -377,6 +387,7 @@ fun MainApp(
                         LibraryScreen(
                             watchlist = watchlist,
                             watchHistory = watchHistory,
+                            initialTab = libraryInitialTab,
                             onMovieClick = { movie ->
                                 viewModel.openDetail(movie.safeSlug, movie.subjectId, movie.safeName, movie.type, movie.posterUrl)
                             },
@@ -388,8 +399,7 @@ fun MainApp(
                                 viewModel.deleteHistory(subId)
                             },
                             onClearHistory = { viewModel.clearAllHistory() },
-                            onExploreClick = { viewModel.selectTab(AppTab.HOME) },
-                            onOpenDevCredit = { showDevCreditDialog = true }
+                            onExploreClick = { viewModel.selectTab(AppTab.HOME) }
                         )
                     }
                 }
